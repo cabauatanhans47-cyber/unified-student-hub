@@ -161,3 +161,72 @@ def test_text_pdf_preview_extracts_deadline(client):
     register(client)
     r=client.post('/api/import/file',files={'file':('syllabus.pdf',output.getvalue(),'application/pdf')})
     assert r.status_code==200 and r.json()['tasks'][0]['title']=='Lab report'
+
+
+def test_shared_proxy_does_not_pool_students(client):
+    # All requests use the same TestClient peer, as with one hosting proxy.
+    # More than 20 distinct students can attempt authentication independently.
+    for i in range(25):
+        response = client.post('/api/auth/login', json={
+            'username': f'student_{i}', 'password': 'incorrect-password',
+        })
+        assert response.status_code == 401
+    register(client, 'new_student')
+
+
+def test_account_limit_shared_across_routes_case_and_forwarding_headers(client):
+    register(client, 'student')  # Registration counts as the first attempt.
+    for i in range(19):
+        response = client.post('/api/auth/login', json={
+            'username': 'STUDENT' if i % 2 else 'student',
+            'password': 'incorrect-password',
+        }, headers={'X-Forwarded-For': f'192.0.2.{i + 1}'})
+        assert response.status_code == 401
+    for route in ('login', 'register'):
+        response = client.post('/api/auth/' + route, json={
+            'username': 'Student', 'password': 'strong-password-123',
+        }, headers={'X-Forwarded-For': '198.51.100.1'})
+        assert response.status_code == 429
+        assert 1 <= int(response.headers['Retry-After']) <= 300
+    register(client, 'unaffected_student')
+
+
+def test_account_limit_expires_without_extending_on_rejected_attempts(client, monkeypatch):
+    import app.main as main
+    clock = [1000.0]
+    monkeypatch.setattr(main, 'monotonic', lambda: clock[0])
+    for _ in range(20):
+        main.throttle('student')
+    credentials = {'username': 'student', 'password': 'strong-password-123'}
+    clock[0] = 1299.0
+    response = client.post('/api/auth/register', json=credentials)
+    assert response.status_code == 429
+    assert response.headers['Retry-After'] == '1'
+    clock[0] = 1300.0
+    assert client.post('/api/auth/register', json=credentials).status_code == 200
+
+
+def test_successful_logins_are_also_limited(client):
+    register(client)
+    credentials = {'username': 'student', 'password': 'strong-password-123'}
+    for _ in range(19):
+        assert client.post('/api/auth/login', json=credentials).status_code == 200
+    assert client.post('/api/auth/login', json=credentials).status_code == 429
+
+
+def test_concurrent_attempts_cannot_exceed_account_limit(client):
+    from concurrent.futures import ThreadPoolExecutor
+    from fastapi import HTTPException
+    from app.main import throttle
+
+    def attempt(_):
+        try:
+            throttle('student')
+            return 200
+        except HTTPException as exc:
+            return exc.status_code
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        statuses = list(pool.map(attempt, range(80)))
+    assert statuses.count(200) == 20
+    assert statuses.count(429) == 60

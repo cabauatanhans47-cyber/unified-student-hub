@@ -1,4 +1,7 @@
 import hashlib, os, secrets, time
+from math import ceil
+from threading import Lock
+from time import monotonic
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timezone
@@ -28,6 +31,7 @@ app = FastAPI(title='Unified Student Hub API', version='0.1.0', lifespan=lifespa
 hasher = PasswordHasher()
 DUMMY_HASH = hasher.hash('not-a-real-user-password')
 failures = defaultdict(deque)
+throttle_lock = Lock()
 
 def digest(token): return hashlib.sha256(token.encode()).hexdigest()
 def user(request: Request, s: Session = Depends(db)):
@@ -52,16 +56,23 @@ class Credentials(BaseModel):
     username: str = Field(min_length=3,max_length=40,pattern=r'^[A-Za-z0-9_-]+$')
     password: str = Field(min_length=12,max_length=128)
 
-def throttle(request):
-    address = request.client.host if request.client else 'unknown'
-    q = failures[address]
-    now = time.monotonic()
-    while q and q[0] < now - 300: q.popleft()
-    if len(q) >= 20: raise HTTPException(429, 'Too many attempts. Wait five minutes.')
-    q.append(now)
-    if len(failures) > 10000:
-        for k in list(failures):
-            if not failures[k] or failures[k][-1] < now - 300: del failures[k]
+def throttle(username):
+    # Account-scoped: a reverse proxy or campus NAT must not pool all students.
+    # Never use user-supplied forwarding headers as a throttle identity.
+    # The trusted edge must separately limit aggregate authentication traffic.
+    with throttle_lock:
+        now = monotonic()
+        if len(failures) > 10000:
+            for k in list(failures):
+                if not failures[k] or failures[k][-1] <= now - 300:
+                    del failures[k]
+        q = failures[username.lower()]
+        while q and q[0] <= now - 300: q.popleft()
+        if len(q) >= 20:
+            retry_after = max(1, ceil(q[0] + 300 - now))
+            raise HTTPException(429, 'Too many attempts for this username. Wait five minutes.',
+                                headers={'Retry-After': str(retry_after)})
+        q.append(now)
 
 def login_cookie(response, s, uid):
     s.execute(delete(LoginSession).where(LoginSession.expires < int(time.time())))
@@ -71,7 +82,7 @@ def login_cookie(response, s, uid):
 
 @app.post('/api/auth/register')
 def register(body: Credentials, request: Request, response: Response, s: Session=Depends(db)):
-    throttle(request)
+    throttle(body.username)
     if os.getenv('ALLOW_REGISTRATION','true').lower() != 'true': raise HTTPException(403,'Registration is closed.')
     u = User(username=body.username.lower(),password=hasher.hash(body.password)); s.add(u)
     try: s.commit()
@@ -81,7 +92,7 @@ def register(body: Credentials, request: Request, response: Response, s: Session
 
 @app.post('/api/auth/login')
 def login(body: Credentials, request: Request, response: Response, s: Session=Depends(db)):
-    throttle(request)
+    throttle(body.username)
     u = s.scalar(select(User).where(User.username==body.username.lower()))
     try: hasher.verify(u.password if u else DUMMY_HASH,body.password)
     except (VerifyMismatchError,InvalidHashError): raise HTTPException(401,'Incorrect username or password.')
