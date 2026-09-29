@@ -27,7 +27,7 @@ const assert=require('node:assert/strict');
  await page.getByRole('dialog').waitFor({state:'hidden'});
  await page.getByRole('button',{name:'Save your study hours',exact:true}).click();
  await page.getByLabel('Study from').selectOption('18');
- await page.getByLabel('Until',{exact:true}).selectOption('22');
+ await page.getByLabel('Until').selectOption('22');
  await page.getByLabel('Daily minutes').fill('90');
  await page.getByRole('button',{name:'Save preferences & update plan',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Study preferences saved'}).waitFor();
