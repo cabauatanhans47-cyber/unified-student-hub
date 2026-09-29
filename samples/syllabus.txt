@@ -1,0 +1,8 @@
+Example Computer Engineering Syllabus — fictional sample data
+
+Circuits lab report - 2030-01-02
+Microcontroller quiz - January 3, 2030
+Data structures problem set - 2030-01-04
+Group project proposal - January 6, 2030
+
+Dates are candidates only. Review the extracted dates and estimate remaining effort.

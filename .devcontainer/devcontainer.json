@@ -1,0 +1,9 @@
+{
+  "name": "Unified Student Hub",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {"ghcr.io/devcontainers/features/node:1": {"version": "22"}},
+  "forwardPorts": [8000],
+  "portsAttributes": {"8000": {"label": "Student Hub", "onAutoForward": "notify", "visibility": "private"}},
+  "postCreateCommand": "python -m venv .venv && .venv/bin/pip install -r backend/requirements.txt && npm ci --prefix frontend && npm run build --prefix frontend",
+  "customizations": {"vscode": {"extensions": ["ms-python.python", "dbaeumer.vscode-eslint"]}}
+}

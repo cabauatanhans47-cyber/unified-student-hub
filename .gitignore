@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+*.sqlite*
+*.log
+.DS_Store
+coverage/
+playwright-report/
+test-results/
