@@ -3,7 +3,16 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, String, Integer, Boolean, Text, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
-engine = create_engine(os.getenv('DATABASE_URL', 'sqlite:///./hub.db'), **({'connect_args': {'check_same_thread': False}} if os.getenv('DATABASE_URL', 'sqlite:').startswith('sqlite:') else {}))
+def normalize_database_url(value):
+    # Hosted providers supply standard PostgreSQL URLs; use our installed psycopg 3 driver.
+    for prefix in ('postgres://', 'postgresql://'):
+        if value.startswith(prefix):
+            return 'postgresql+psycopg://' + value[len(prefix):]
+    return value
+
+database_url = normalize_database_url(os.getenv('DATABASE_URL', 'sqlite:///./hub.db'))
+engine = create_engine(database_url, pool_pre_ping=True,
+                       **({'connect_args': {'check_same_thread': False}} if database_url.startswith('sqlite:') else {}))
 SessionLocal = sessionmaker(bind=engine)
 class Base(DeclarativeBase): pass
 class User(Base):

@@ -131,6 +131,8 @@ docker compose up -d --force-recreate app
 
 Making the repository public lets others download, fork, extend, and self-host it. A GitHub repository alone does **not** run this backend. GitHub Pages cannot host FastAPI/PostgreSQL.
 
+For the free student beta, follow the [Render + Neon setup guide](docs/RENDER_NEON.md); the included `render.yaml` preconfigures the Free web service.
+
 For a shared browser URL, deploy the Docker app behind an HTTPS reverse proxy and a durable PostgreSQL database. Follow [deployment notes](docs/DEPLOYMENT.md). This initial release is not a managed campus-wide service or an uptime promise.
 
 ## Tests and development

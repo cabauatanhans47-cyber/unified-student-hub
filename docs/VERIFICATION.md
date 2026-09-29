@@ -43,3 +43,9 @@ Screenshots use fabricated test-account data. They are examples of the implement
 - `frontend/tests/beta-smoke.cjs` checks the actual browser flow: signup, three-step onboarding, keyboard sample activation, real deadline creation, saved hours after reload, sample cleanup without deleting coursework, a second account, syllabus import, and completion. It asserts no browser exceptions and no horizontal overflow at 390 px, and captures desktop/mobile screenshots.
 - The **Test and build** workflow runs this browser check and uploads screenshots. Consult the workflow run for the exact commit's pass/fail result. Local Chromium could not launch because this authoring environment disallows its required sockets; no local browser pass is claimed for this update.
 - Permanent hosting, production PostgreSQL backups/restores, provider-edge abuse protection, and live school integrations remain unverified and unconfigured. See [beta launch gates](BETA.md).
+
+## Render / Neon preparation
+
+- Three additional tests verify that provider PostgreSQL URLs select the installed psycopg 3 driver and preserve escaped passwords plus TLS/channel-binding parameters (33 backend cases in total).
+- The browser CI journey now uses a real disposable PostgreSQL 16 service, including account creation, task writes, preferences, samples, imports, completion, and account separation. Check the workflow run for the exact commit's result. This supplements the SQLite tests; it is not a test of Neon TLS or the Render Docker runtime.
+- `render.yaml` explicitly requests the Free plan, Singapore, secure cookies, and a private `DATABASE_URL` prompt. No hosting credentials are committed.

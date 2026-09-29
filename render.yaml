@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: unified-student-hub
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: ALLOW_REGISTRATION
+        value: "true"
+      - key: LMS_ALLOWED_HOSTS
+        value: ""
+      - key: PORT
+        value: "8000"

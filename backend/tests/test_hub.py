@@ -333,3 +333,17 @@ def test_additive_preferences_table_preserves_existing_sqlite_and_backup(tmp_pat
         assert session.get(StudyPreferences,1).daily_minutes==90
         assert session.query(Task).one().title=='Keep my coursework'
     restored.dispose()
+
+
+@pytest.mark.parametrize('prefix', ['postgres://','postgresql://','postgresql+psycopg://'])
+def test_hosted_postgres_urls_use_installed_driver_and_keep_tls(prefix):
+    from app.models import normalize_database_url
+    url=prefix+'student:p%40ss@example.invalid/neondb?sslmode=require&channel_binding=require'
+    engine=create_engine(normalize_database_url(url))
+    try:
+        assert engine.dialect.driver=='psycopg'
+        assert engine.url.password=='p@ss'
+        assert engine.url.query['sslmode']=='require'
+        assert engine.url.query['channel_binding']=='require'
+    finally:
+        engine.dispose()

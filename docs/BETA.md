@@ -10,7 +10,7 @@
 
 ## Hosting is still required
 
-No hosting account, paid plan, domain, or permanent public app address is provisioned by these source changes. Choose a provider and budget before purchasing or deploying. A provider-generated HTTPS address is sufficient for the pilot; a custom domain can wait.
+Render Free plus Neon Free is the selected pilot setup. Follow [RENDER_NEON.md](RENDER_NEON.md) to create the database and deploy the included Blueprint. Source changes alone do not provision a paid plan, domain, or permanent public app address. A provider-generated HTTPS address is sufficient for the pilot; a custom domain can wait.
 
 Use a Docker-compatible web service and durable PostgreSQL. The repository's root `Dockerfile` builds the frontend and serves it with the API, as one application on port 8000. Keep one worker and one replica while authentication counters are process-local. Configure:
 
@@ -34,7 +34,7 @@ Store credentials in the hosting provider's secret settings. Do not commit datab
 5. Enable private scheduled database backups. Restore a backup into a separate database, then verify accounts, tasks, events, and study preferences. Do not test restoration by overwriting the live database. Retention, encryption, and restore instructions depend on the chosen provider.
 6. Tell testers this is a small beta: password recovery, account deletion UI, reminders, background LMS sync, and recurring calendar expansion are not implemented. Ask them to use coursework they are comfortable putting in a pilot.
 
-Docker/PostgreSQL execution, hosting-edge protection, and a production PostgreSQL restore are still deployment-specific checks. The local SQLite upgrade/backup test is not a substitute for them.
+Docker app execution, real Neon connectivity, hosting-edge protection, and a production PostgreSQL restore are still deployment-specific checks. CI now runs the browser journey against a disposable PostgreSQL 16 database; consult the exact workflow run for its result. The local SQLite upgrade/backup test is not a substitute for them.
 
 ## Pilot success criteria
 
