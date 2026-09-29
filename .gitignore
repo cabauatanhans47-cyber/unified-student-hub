@@ -15,3 +15,5 @@ __pycache__/
 coverage/
 playwright-report/
 test-results/
+
+frontend/test-results/

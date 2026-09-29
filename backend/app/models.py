@@ -16,6 +16,14 @@ class LoginSession(Base):
     token: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     expires: Mapped[int] = mapped_column(Integer)
+class StudyPreferences(Base):
+    __tablename__ = 'study_preferences'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    tz: Mapped[str] = mapped_column(String(100), default='Asia/Manila')
+    start_hour: Mapped[int] = mapped_column(Integer, default=17)
+    end_hour: Mapped[int] = mapped_column(Integer, default=21)
+    daily_minutes: Mapped[int] = mapped_column(Integer, default=120)
+    plan_seen: Mapped[bool] = mapped_column(Boolean, default=False)
 class Task(Base):
     __tablename__ = 'tasks'
     __table_args__ = (UniqueConstraint('user_id', 'external_id'),)

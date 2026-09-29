@@ -4,7 +4,7 @@ from threading import Lock
 from time import monotonic
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -13,13 +13,13 @@ from argon2.exceptions import VerifyMismatchError, InvalidHashError
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select, delete, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from icalendar import Calendar, Event
 import httpx
-from .models import Base, engine, db, User, LoginSession, Task, BusyEvent
+from .models import Base, engine, db, User, LoginSession, Task, BusyEvent, StudyPreferences
 from .planner import plan_week, stamp
 from . import importers, lms
 
@@ -114,7 +114,7 @@ class TaskInput(BaseModel):
     due: str
     minutes: int = Field(default=60,ge=15,le=2400)
     done: bool = False
-    source: Literal['manual','syllabus','calendar','canvas','moodle'] = 'manual'
+    source: Literal['manual','syllabus','calendar','canvas','moodle','sample'] = 'manual'
     external_id: str | None = Field(default=None,max_length=64)
     @field_validator('title','course')
     @classmethod
@@ -184,6 +184,86 @@ def valid_zone(tz):
     try: ZoneInfo(tz)
     except (ZoneInfoNotFoundError,ValueError): raise HTTPException(422,'Unknown timezone. Use an IANA name such as Asia/Manila.')
     return tz
+
+class PreferencesInput(BaseModel):
+    tz: str = Field(max_length=100)
+    start_hour: int = Field(17, ge=0, le=22)
+    end_hour: int = Field(21, ge=1, le=23)
+    daily_minutes: int = Field(120, ge=30, le=720)
+
+    @model_validator(mode='after')
+    def valid_window(self):
+        if self.end_hour <= self.start_hour:
+            raise ValueError('End hour must follow start hour.')
+        return self
+
+def preferences_dict(value):
+    fields = ('tz', 'start_hour', 'end_hour', 'daily_minutes', 'plan_seen')
+    if value is None:
+        return dict(saved=False, tz='Asia/Manila', start_hour=17, end_hour=21,
+                    daily_minutes=120, plan_seen=False)
+    return {'saved': True, **{key: getattr(value, key) for key in fields}}
+
+@app.get('/api/preferences')
+def preferences(uid=Depends(user), s:Session=Depends(db)):
+    return preferences_dict(s.get(StudyPreferences, uid))
+
+@app.put('/api/preferences')
+def save_preferences(body:PreferencesInput, uid=Depends(user), s:Session=Depends(db)):
+    valid_zone(body.tz)
+    value = s.get(StudyPreferences, uid)
+    if value is None:
+        value = StudyPreferences(user_id=uid)
+        s.add(value)
+    for key, item in body.model_dump().items():
+        setattr(value, key, item)
+    s.commit()
+    return preferences_dict(value)
+
+@app.post('/api/preferences/plan-seen')
+def mark_plan_seen(uid=Depends(user), s:Session=Depends(db)):
+    value = s.get(StudyPreferences, uid)
+    if value is None:
+        raise HTTPException(409, 'Save your study preferences first.')
+    # Update only this flag, so a late onboarding request cannot overwrite hours.
+    value.plan_seen = True
+    s.commit()
+    return preferences_dict(value)
+
+SAMPLE_TASKS = (
+    ('lab', 'Sample: circuits lab report', 'Computer Engineering', 2, 60),
+    ('quiz', 'Sample: prepare for a math quiz', 'Mathematics', 4, 45),
+    ('reading', 'Sample: reading reflection', 'General Education', 6, 30),
+)
+SAMPLE_IDS = tuple('student-hub-sample-v1-' + item[0] for item in SAMPLE_TASKS)
+
+@app.post('/api/sample-workspace')
+def add_samples(tz:str='Asia/Manila', uid=Depends(user), s:Session=Depends(db)):
+    zone = ZoneInfo(valid_zone(tz))
+    today = datetime.now(zone).date()
+    existing = set(s.scalars(select(Task.external_id).where(
+        Task.user_id == uid, Task.external_id.in_(SAMPLE_IDS))))
+    missing = [item for item in SAMPLE_TASKS if 'student-hub-sample-v1-' + item[0] not in existing]
+    limit(s, Task, uid, len(missing))
+    for key, title, course, days, minutes in missing:
+        due = datetime.combine(today + timedelta(days=days), datetime.min.time(), tzinfo=zone)
+        due = due.replace(hour=23, minute=59).astimezone(timezone.utc).isoformat()
+        s.add(Task(user_id=uid, title=title, course=course, due=due, minutes=minutes,
+                   done=False, source='sample', external_id='student-hub-sample-v1-' + key))
+    try:
+        s.commit()
+    except IntegrityError:
+        # Another tab may have added the same samples while this request ran.
+        s.rollback()
+        raise HTTPException(409, 'Sample deadlines were added in another tab. Refresh to see them.')
+    return {'added': len(missing)}
+
+@app.delete('/api/sample-workspace')
+def remove_samples(uid=Depends(user), s:Session=Depends(db)):
+    result = s.execute(delete(Task).where(Task.user_id == uid, Task.source == 'sample',
+                                         Task.external_id.in_(SAMPLE_IDS)))
+    s.commit()
+    return {'removed': result.rowcount}
 
 @app.post('/api/import/file')
 async def preview_file(file:UploadFile=File(...),tz:str='Asia/Manila',mode:Literal['busy','deadlines']='busy',uid=Depends(user)):

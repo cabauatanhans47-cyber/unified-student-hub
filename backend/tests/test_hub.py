@@ -230,3 +230,106 @@ def test_concurrent_attempts_cannot_exceed_account_limit(client):
         statuses = list(pool.map(attempt, range(80)))
     assert statuses.count(200) == 20
     assert statuses.count(429) == 60
+
+
+def test_preferences_persist_and_stay_private(client):
+    assert client.get('/api/preferences').status_code == 401
+    register(client)
+    assert client.get('/api/preferences').json()['saved'] is False
+    settings = dict(tz='Asia/Manila', start_hour=18, end_hour=22, daily_minutes=90, plan_seen=True)
+    assert client.post('/api/preferences/plan-seen').status_code == 409
+    assert client.put('/api/preferences', json=settings).json() == dict(saved=True, **{**settings, 'plan_seen':False})
+    assert client.post('/api/preferences/plan-seen').json() == dict(saved=True, **settings)
+    client.post('/api/auth/logout')
+    register(client, 'other')
+    assert client.get('/api/preferences').json()['saved'] is False
+    client.post('/api/auth/logout')
+    client.post('/api/auth/login', json={'username':'student','password':'strong-password-123'})
+    assert client.get('/api/preferences').json() == dict(saved=True, **settings)
+
+
+@pytest.mark.parametrize('changes', [
+    {'tz':'Not/A_Zone'}, {'start_hour':22,'end_hour':21},
+    {'start_hour':-1}, {'daily_minutes':0}, {'daily_minutes':721},
+])
+def test_invalid_preferences_do_not_replace_saved_values(client, changes):
+    register(client)
+    settings = dict(tz='Asia/Manila', start_hour=18, end_hour=22, daily_minutes=90)
+    assert client.put('/api/preferences', json=settings).status_code == 200
+    assert client.put('/api/preferences', json={**settings, **changes}).status_code == 422
+    assert client.get('/api/preferences').json()['daily_minutes'] == 90
+    assert client.get('/api/preferences').json()['tz'] == 'Asia/Manila'
+
+
+def test_sample_workspace_is_current_repeatable_and_removable(client):
+    from zoneinfo import ZoneInfo
+    assert client.post('/api/sample-workspace').status_code == 401
+    register(client)
+    real = client.post('/api/tasks', json=task()).json()
+    assert client.post('/api/sample-workspace?tz=Not/A_Zone').status_code == 422
+    assert client.post('/api/sample-workspace?tz=Asia/Manila').json() == {'added':3}
+    samples = [t for t in client.get('/api/tasks').json() if t['source']=='sample']
+    assert len(samples) == 3
+    today = datetime.now(ZoneInfo('Asia/Manila')).date()
+    assert sorted((stamp(t['due']).astimezone(ZoneInfo('Asia/Manila')).date()-today).days for t in samples)==[2,4,6]
+    edited = {**samples[0], 'done':True, 'minutes':15, 'title':'Edited practice item'}
+    assert client.put('/api/tasks/'+str(edited['id']), json=edited).status_code == 200
+    assert client.post('/api/sample-workspace').json() == {'added':0}
+    saved = next(t for t in client.get('/api/tasks').json() if t['id']==edited['id'])
+    assert saved['done'] and saved['minutes']==15 and saved['title']==edited['title']
+    assert client.delete('/api/sample-workspace').json()=={'removed':3}
+    assert client.get('/api/tasks').json()==[real]
+    assert client.delete('/api/sample-workspace').json()=={'removed':0}
+
+
+def test_sample_cleanup_cannot_touch_another_account(client):
+    register(client)
+    client.post('/api/sample-workspace')
+    client.post('/api/auth/logout')
+    register(client, 'other')
+    assert client.get('/api/tasks').json()==[]
+    assert client.delete('/api/sample-workspace').json()=={'removed':0}
+    client.post('/api/sample-workspace')
+    client.delete('/api/sample-workspace')
+    client.post('/api/auth/logout')
+    client.post('/api/auth/login', json={'username':'student','password':'strong-password-123'})
+    assert len(client.get('/api/tasks').json())==3
+
+
+def test_new_writes_require_verification_header(client):
+    register(client)
+    for method, path, body in [
+        ('put','/api/preferences',dict(tz='Asia/Manila')),
+        ('post','/api/sample-workspace',None),
+        ('post','/api/preferences/plan-seen',None),
+        ('delete','/api/sample-workspace',None),
+    ]:
+        assert client.request(method, path, json=body, headers={'X-Requested-With':''}).status_code==403
+
+
+def test_additive_preferences_table_preserves_existing_sqlite_and_backup(tmp_path):
+    import sqlite3
+    from app.models import StudyPreferences, User, Task
+    database=tmp_path/'existing.db'
+    engine=create_engine('sqlite:///'+str(database))
+    # Simulate the previous release: the preferences table does not exist yet.
+    Base.metadata.create_all(engine, tables=[t for t in Base.metadata.sorted_tables if t.name!='study_preferences'])
+    with sessionmaker(bind=engine)() as session:
+        session.add(User(id=1, username='existing', password='existing-hash'))
+        session.add(Task(user_id=1, title='Keep my coursework', course='CPE', due=task()['due'], minutes=60, done=True))
+        session.commit()
+    Base.metadata.create_all(engine)
+    with sessionmaker(bind=engine)() as session:
+        assert session.get(User,1).username=='existing'
+        assert session.query(Task).one().done is True
+        session.add(StudyPreferences(user_id=1,tz='Asia/Manila',daily_minutes=90))
+        session.commit()
+    engine.dispose()
+    backup=tmp_path/'backup.db'
+    with sqlite3.connect(database) as source, sqlite3.connect(backup) as dest:
+        source.backup(dest)
+    restored=create_engine('sqlite:///'+str(backup))
+    with sessionmaker(bind=restored)() as session:
+        assert session.get(StudyPreferences,1).daily_minutes==90
+        assert session.query(Task).one().title=='Keep my coursework'
+    restored.dispose()

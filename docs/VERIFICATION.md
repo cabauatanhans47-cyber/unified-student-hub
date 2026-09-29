@@ -34,3 +34,12 @@ With Python 3.12 dependencies installed, run `python -m pytest -q` from the repo
 A dependency emits a Starlette TestClient deprecation warning for httpx; it does not affect the passing tests. Recheck the test-client dependency when updating FastAPI/Starlette.
 
 Screenshots use fabricated test-account data. They are examples of the implemented interface, not activity from real students.
+
+## Student beta preparation
+
+- All 30 backend tests pass locally with Python 3.12. In addition to prior coverage, these verify saved preferences across login sessions, account isolation, invalid preferences, current sample dates, repeat sample addition, preservation of edited samples, safe sample cleanup, and request verification on new writes.
+- An additive-schema test starts with the previous SQLite tables and existing account/coursework rows, creates the new preferences table, and confirms that coursework and preferences survive a SQLite backup and restore.
+- The frontend production build passes.
+- `frontend/tests/beta-smoke.cjs` checks the actual browser flow: signup, three-step onboarding, keyboard sample activation, real deadline creation, saved hours after reload, sample cleanup without deleting coursework, a second account, syllabus import, and completion. It asserts no browser exceptions and no horizontal overflow at 390 px, and captures desktop/mobile screenshots.
+- The **Test and build** workflow runs this browser check and uploads screenshots. Consult the workflow run for the exact commit's pass/fail result. Local Chromium could not launch because this authoring environment disallows its required sockets; no local browser pass is claimed for this update.
+- Permanent hosting, production PostgreSQL backups/restores, provider-edge abuse protection, and live school integrations remain unverified and unconfigured. See [beta launch gates](BETA.md).

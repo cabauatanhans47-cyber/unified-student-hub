@@ -18,7 +18,9 @@ backend/tests/     API isolation, import, and planner tests
 3. Imports produce unsaved candidates. The student reviews, edits, and removes candidates before the confirmation endpoint applies changes in one transaction.
 4. Stable source IDs become per-user deduplication keys. Importing matching items updates dates and titles while retaining task effort/completion.
 5. The planner receives tasks, busy intervals, a local start date, timezone, daily time window, and capacity. It iterates UTC slots to avoid DST duplication, rejects past/occupied time, and allocates earliest deadlines first.
-6. FastAPI serves the compiled frontend in production. Vite proxies `/api` during frontend development.
+6. `study_preferences` stores one row per user: timezone, hours, daily budget, and whether the student has reviewed a saved plan. `/api/preferences` reads/writes only the authenticated account. The week start date remains visit-specific.
+7. `/api/sample-workspace` adds or removes three account-scoped practice tasks using reserved stable IDs and a `sample` source. Repeated additions preserve edits and completion. Removal requires both the sample source and a reserved ID.
+8. FastAPI serves the compiled frontend in production. Vite proxies `/api` during frontend development.
 
 ## Extend it
 

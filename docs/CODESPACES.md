@@ -39,3 +39,21 @@ Use the actual hostname your school provides. Never paste your token into commit
 Use the Source Control panel or normal Git commands to commit your source edits. The database, passwords, `.env`, and uploaded study material must not be committed. `.gitignore` excludes the local database and environment files.
 
 Codespaces is a development environment that can stop or be deleted. It is not durable public hosting. Your SQLite data stays in that codespace and is lost if you delete it. Export deadlines before deleting a workspace; ICS exports do not contain accounts or study history.
+
+## Update an existing Codespace for the beta features
+
+Stop the server with Ctrl+C. With the virtual environment active, run:
+
+```bash
+cd /workspaces/unified-student-hub
+# Back up your existing local database before the first upgraded startup.
+# Run only if backend/hub.db exists; keep this backup private.
+cp backend/hub.db /tmp/student-hub-before-beta.db
+git pull --ff-only
+npm ci --prefix frontend
+npm run build --prefix frontend
+cd backend
+COOKIE_SECURE=true uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+If `git pull` reports local changes, stop and preserve them before merging; do not reset or delete your work. This update adds a `study_preferences` table at startup and does not alter existing account, deadline, event, or session columns. Existing users can keep their accounts. A temporary backup is useful for this update but is not a durable off-device backup.

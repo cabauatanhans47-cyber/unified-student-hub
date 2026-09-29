@@ -16,6 +16,8 @@ React · FastAPI · PostgreSQL · SQLite for local development · MIT license
 - Earliest-deadline-first planning in 30-minute blocks, with a daily effort budget and timezone selection.
 - Workload warnings for overdue tasks and work that cannot fit into the chosen week.
 - Repeated imports update matching items without resetting completion or effort estimates.
+- Guided three-step onboarding and removable sample deadlines dated for the coming week.
+- Account-saved timezone, study hours, and daily budget across refreshes and devices.
 - Responsive interface, sample files, CI checks, and documented extension points.
 
 ![Student Hub dashboard](docs/dashboard.png)
@@ -81,6 +83,12 @@ For frontend hot reload, run `npm run dev --prefix frontend` from a second termi
 
 The included development-container configuration installs the dependencies and builds the interface. See [step-by-step Codespaces instructions](docs/CODESPACES.md).
 
+## First visit
+
+Follow the checklist on **Overview**: add a deadline, save study hours, then review **Weekly plan**. **Try sample deadlines** adds three clearly labeled practice tasks dated two, four, and six days ahead in the selected study timezone. Repeated clicks do not duplicate or reset existing samples. **Remove sample deadlines** deletes only those practice tasks, including edits to them; real coursework stays.
+
+For the five-student pilot and remaining hosting work, see [the beta launch checklist](docs/BETA.md).
+
 ## Try a full workflow
 
 1. Create an account and open **Imports → Syllabus**.
@@ -115,7 +123,7 @@ docker compose up -d --force-recreate app
 - PDF extraction handles **text PDFs**, not scans. Supported dates: `YYYY-MM-DD` and full English month dates such as `January 2, 2030`. Every extracted date is a **candidate**, not a verified assignment. Defaults to 23:59 in the chosen import timezone. Always review the original document.
 - ICS recurring events are deliberately skipped with a visible warning. Export expanded individual occurrences or use single events. All-day busy events block the full local day; all-day deadlines default to 23:59.
 - Planning uses one daily time window for all seven days, earliest due date first, and a daily budget. It is deterministic, not an AI prediction. A busy event overlapping a 30-minute grid block excludes that whole block. It schedules only future time and reports leftover effort.
-- Planning does not mark work complete or track elapsed study time. Update the remaining minutes as you work. Settings last for the current page visit.
+- Planning does not mark work complete or track elapsed study time. Update the remaining minutes as you work. Timezone, study hours, and daily budget are saved to your account when you select **Save preferences & update plan**. The displayed week starts on the current device date when you return; a manually selected week is not saved.
 - Re-imported matching deadlines update their title, course, and date but keep your completion flag and effort. Imported busy events match by ICS UID; changing a syllabus line creates a new candidate. There is no automatic deletion when a source item disappears.
 - No email, password reset, OAuth, notifications, recurring calendar expansion, or university SSO yet.
 
@@ -142,7 +150,7 @@ npm run build --prefix frontend
 ## Roadmap
 
 - Recurring calendar expansion and per-day availability.
-- Persistent study preferences and progress tracking.
+- Progress tracking (study preferences are already persistent).
 - OAuth integrations and opt-in scheduled sync.
 - Password recovery, campus SSO, and account deletion.
 - Database migrations, shared rate limiting, and larger deployment testing.

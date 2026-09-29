@@ -33,7 +33,7 @@ For local SQLite, stop the app before copying `backend/hub.db`. An ICS export is
 
 ## Upgrades
 
-This initial schema is created on startup. There is no migration framework yet. Do not assume future schema changes can be applied by simply rebuilding a container. Back up first and review each release's migration instructions.
+The schema is created on startup. The beta onboarding update adds only the missing `study_preferences` table, without altering existing tables. This additive upgrade was tested against an existing SQLite database; back up PostgreSQL and validate the upgrade on a restored copy before a hosted rollout. There is no migration framework yet. Do not assume future schema changes can be applied by simply rebuilding a container. Back up first and review each release's migration instructions.
 
 ## What this deployment does not provide
 
