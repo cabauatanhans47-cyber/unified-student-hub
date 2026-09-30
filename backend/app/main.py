@@ -1,4 +1,5 @@
-import hashlib, os, secrets, time
+import hashlib, os, secrets, time, json
+from uuid import UUID
 from math import ceil
 from threading import Lock
 from time import monotonic
@@ -19,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from icalendar import Calendar, Event
 import httpx
-from .models import Base, engine, db, User, LoginSession, Task, BusyEvent, StudyPreferences
+from .models import Base, engine, db, User, LoginSession, Task, BusyEvent, StudyPreferences, SyncReceipt
 from .planner import plan_week, stamp
 from . import importers, lms
 
@@ -316,6 +317,65 @@ def export(uid=Depends(user),s:Session=Depends(db)):
     for t in s.scalars(select(Task).where(Task.user_id==uid,Task.done==False)):
         e=Event(); e.add('uid',f'task-{t.id}@student-hub'); e.add('dtstamp',datetime.now(timezone.utc)); e.add('dtstart',stamp(t.due)); e.add('summary',f'{t.course}: {t.title}'); e.add('description',f'Deadline. Estimated effort: {t.minutes} minutes.'); cal.add_component(e)
     return Response(cal.to_ical(),media_type='text/calendar',headers={'Content-Disposition':'attachment; filename="student-hub-deadlines.ics"'})
+class SyncInput(BaseModel):
+    operation_id: UUID
+    account: str = Field(max_length=40)
+    action: Literal['create','update','delete','preferences']
+    task_id: int | None = None
+    task: TaskInput | None = None
+    base: TaskInput | None = None
+    preferences: PreferencesInput | None = None
+    base_preferences: PreferencesInput | None = None
+
+@app.post('/api/sync')
+def sync_mutation(body:SyncInput, uid=Depends(user), s:Session=Depends(db)):
+    if s.scalar(select(User).where(User.id == uid).with_for_update()).username != body.account:
+        raise HTTPException(409, 'Sign in to the account that owns these offline changes.')
+    oid = str(body.operation_id)
+    request_hash = digest(body.model_dump_json())
+    old = s.get(SyncReceipt, (uid, oid))
+    if old:
+        if old.request_hash != request_hash:
+            raise HTTPException(409, 'This offline operation was already used with different data.')
+        return json.loads(old.result)
+    fields = ('title','course','due','minutes','done')
+    if body.action == 'preferences':
+        if body.preferences is None or body.base_preferences is None:
+            raise HTTPException(422, 'Both new and previous preferences are required.')
+        valid_zone(body.preferences.tz)
+        value = s.scalar(select(StudyPreferences).where(StudyPreferences.user_id == uid).with_for_update())
+        current = preferences_dict(value)
+        if any(current[k] != v for k,v in body.base_preferences.model_dump().items()):
+            raise HTTPException(409, 'Study preferences changed on another device. Export your pending changes before resolving the conflict.')
+        if value is None:
+            value = StudyPreferences(user_id=uid); s.add(value)
+        for k,v in body.preferences.model_dump().items(): setattr(value,k,v)
+        s.flush(); result = {'preferences':preferences_dict(value)}
+    elif body.action == 'create':
+        if body.task is None: raise HTTPException(422,'A deadline is required.')
+        limit(s,Task,uid)
+        data=body.task.model_dump();data.update(source='manual',external_id='offline:'+oid)
+        value=Task(user_id=uid,**data);s.add(value);s.flush();result={'task':task_dict(value)}
+    else:
+        value=s.scalar(select(Task).where(Task.user_id==uid,Task.id==body.task_id).with_for_update())
+        if value is None: raise HTTPException(409,'This deadline was removed or is unavailable. Export your pending changes before resolving the conflict.')
+        if body.base is None or any(getattr(value,k)!=getattr(body.base,k) for k in fields):
+            raise HTTPException(409,'This deadline changed on another device. Export your pending changes before resolving the conflict.')
+        if body.action=='delete':
+            s.delete(value); result={'deleted':True}
+        else:
+            if body.task is None: raise HTTPException(422,'A deadline is required.')
+            for k in fields: setattr(value,k,getattr(body.task,k))
+            s.flush();result={'task':task_dict(value)}
+    s.add(SyncReceipt(user_id=uid,operation_id=oid,request_hash=request_hash,result=json.dumps(result)))
+    try: s.commit()
+    except IntegrityError:
+        s.rollback()
+        receipt=s.get(SyncReceipt,(uid,oid))
+        if receipt and receipt.request_hash==request_hash: return json.loads(receipt.result)
+        raise HTTPException(409,'A simultaneous sync changed this record. Retry after refreshing.')
+    return result
+
 @app.get('/api/health')
 def health(): return {'status':'ok'}
 
@@ -326,3 +386,10 @@ if frontend.is_dir():
     def index(): return FileResponse(frontend/'index.html')
     @app.get('/favicon.svg')
     def favicon(): return FileResponse(frontend/'favicon.svg')
+
+    @app.get('/sw.js')
+    def service_worker(): return FileResponse(frontend/'sw.js',media_type='application/javascript',headers={'Cache-Control':'no-cache','Service-Worker-Allowed':'/'})
+    @app.get('/manifest.webmanifest')
+    def manifest(): return FileResponse(frontend/'manifest.webmanifest',media_type='application/manifest+json')
+    @app.get('/icon.svg')
+    def icon(): return FileResponse(frontend/'icon.svg',media_type='image/svg+xml')

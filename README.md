@@ -158,3 +158,9 @@ npm run build --prefix frontend
 - Database migrations, shared rate limiting, and larger deployment testing.
 
 These are future work, not current features. Contributions are welcome under the MIT license.
+
+## Offline materials and focus timer
+
+Sign in and choose **Enable offline access** on your personal device. The app can reopen without internet, queue deadline/preference edits for reconnection, and plan locally. The **Materials** tab saves PDFs, presentations, documents, spreadsheets, text, and images on the device; PDFs support area highlights, drawing, and annotated downloads. **Focus timer** supports custom study/rest minutes, cycles, pause/resume, and refresh recovery.
+
+Materials do **not** sync across devices. Download backups before clearing browser data. Office previews show extracted text; this is not a full PowerPoint/Word editor. See [offline study instructions and limits](docs/OFFLINE_STUDY.md).

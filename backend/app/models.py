@@ -33,6 +33,13 @@ class StudyPreferences(Base):
     end_hour: Mapped[int] = mapped_column(Integer, default=21)
     daily_minutes: Mapped[int] = mapped_column(Integer, default=120)
     plan_seen: Mapped[bool] = mapped_column(Boolean, default=False)
+class SyncReceipt(Base):
+    __tablename__ = 'sync_receipts'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    operation_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    result: Mapped[str] = mapped_column(Text)
+
 class Task(Base):
     __tablename__ = 'tasks'
     __table_args__ = (UniqueConstraint('user_id', 'external_id'),)

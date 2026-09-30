@@ -1,1 +1,25 @@
-{"name":"unified-student-hub","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview"},"dependencies":{"lucide-react":"^0.468.0","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"playwright":"1.51.1","vite":"^6.0.0"}}
+{
+  "name": "unified-student-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build && node scripts/build-offline.mjs",
+    "preview": "vite preview",
+    "test": "node --test tests/unit.test.mjs"
+  },
+  "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
+    "fflate": "0.8.2",
+    "lucide-react": "^0.468.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "4.10.38",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "playwright": "1.51.1",
+    "vite": "^6.0.0"
+  }
+}

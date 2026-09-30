@@ -34,7 +34,7 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci && npm run build
+      - run: npm ci && npm test && npm run build
         working-directory: frontend
       - name: Install test browser
         run: npx playwright install --with-deps chromium
@@ -50,6 +50,7 @@ jobs:
           curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8000/api/health
           cd frontend
           node tests/beta-smoke.cjs
+          node tests/study-smoke.cjs
       - name: Save browser screenshots
         if: always()
         uses: actions/upload-artifact@v4

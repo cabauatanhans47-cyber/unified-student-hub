@@ -347,3 +347,49 @@ def test_hosted_postgres_urls_use_installed_driver_and_keep_tls(prefix):
         assert engine.url.query['channel_binding']=='require'
     finally:
         engine.dispose()
+
+# Offline writes use account-bound, atomic receipts so a dropped response can retry.
+def sync_body(action, **values):
+    from uuid import uuid4
+    return dict(operation_id=str(uuid4()), account='student', action=action, **values)
+
+def test_offline_create_retry_and_conflict(client):
+    register(client)
+    body=sync_body('create',task=task())
+    first=client.post('/api/sync',json=body)
+    assert first.status_code==200,first.text
+    assert client.post('/api/sync',json=body).json()==first.json()
+    assert len(client.get('/api/tasks').json())==1
+    body['task']['title']='Changed request'
+    assert client.post('/api/sync',json=body).status_code==409
+    base=first.json()['task']; edit={**base,'minutes':90}
+    update=sync_body('update',task_id=base['id'],base=base,task=edit)
+    assert client.post('/api/sync',json=update).status_code==200
+    assert client.post('/api/sync',json=update).status_code==200
+    assert client.post('/api/sync',json=sync_body('delete',task_id=base['id'],base=base)).status_code==409
+    removal=sync_body('delete',task_id=base['id'],base=edit)
+    assert client.post('/api/sync',json=removal).status_code==200
+    assert client.post('/api/sync',json=removal).status_code==200
+    assert client.get('/api/tasks').json()==[]
+
+def test_offline_account_and_csrf_isolation(client):
+    register(client)
+    body=sync_body('create',task=task())
+    assert client.post('/api/sync',json=body,headers={'X-Requested-With':''}).status_code==403
+    first=client.post('/api/sync',json=body).json()['task']
+    client.post('/api/auth/logout');register(client,'other')
+    assert client.post('/api/sync',json=body).status_code==409
+    body=sync_body('update',task_id=first['id'],base=first,task=first);body['account']='other'
+    assert client.post('/api/sync',json=body).status_code==409
+    assert client.get('/api/tasks').json()==[]
+
+def test_offline_preferences_retry_and_concurrent_edit(client):
+    register(client)
+    base=client.get('/api/preferences').json()
+    new=dict(tz='Asia/Manila',start_hour=18,end_hour=22,daily_minutes=90)
+    body=sync_body('preferences',base_preferences=base,preferences=new)
+    result=client.post('/api/sync',json=body)
+    assert result.status_code==200,result.text
+    assert client.post('/api/sync',json=body).json()==result.json()
+    assert client.post('/api/sync',json=sync_body('preferences',base_preferences=base,preferences=new)).status_code==409
+    assert client.get('/api/preferences').json()['daily_minutes']==90
