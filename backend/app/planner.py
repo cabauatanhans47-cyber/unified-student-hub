@@ -15,7 +15,7 @@ def plan_week(tasks, events, start, tz, start_hour=17, end_hour=21, daily_minute
     for offset in range(7):
         day = start + timedelta(days=offset)
         days.append({'date': day.isoformat(), 'minutes': 0, 'capacity': daily_minutes, 'sessions': []})
-        # Iterate in UTC so DST transitions never duplicate or invent time.
+
         cursor = datetime.combine(day, time(start_hour), zone).astimezone(timezone.utc)
         stop = datetime.combine(day, time(end_hour), zone).astimezone(timezone.utc)
         while cursor + timedelta(minutes=30) <= stop:

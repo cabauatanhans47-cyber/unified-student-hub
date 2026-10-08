@@ -58,9 +58,9 @@ class Credentials(BaseModel):
     password: str = Field(min_length=12,max_length=128)
 
 def throttle(username):
-    # Account-scoped: a reverse proxy or campus NAT must not pool all students.
-    # Never use user-supplied forwarding headers as a throttle identity.
-    # The trusted edge must separately limit aggregate authentication traffic.
+
+
+
     with throttle_lock:
         now = monotonic()
         if len(failures) > 10000:
@@ -226,7 +226,7 @@ def mark_plan_seen(uid=Depends(user), s:Session=Depends(db)):
     value = s.get(StudyPreferences, uid)
     if value is None:
         raise HTTPException(409, 'Save your study preferences first.')
-    # Update only this flag, so a late onboarding request cannot overwrite hours.
+
     value.plan_seen = True
     s.commit()
     return preferences_dict(value)
@@ -254,7 +254,7 @@ def add_samples(tz:str='Asia/Manila', uid=Depends(user), s:Session=Depends(db)):
     try:
         s.commit()
     except IntegrityError:
-        # Another tab may have added the same samples while this request ran.
+
         s.rollback()
         raise HTTPException(409, 'Sample deadlines were added in another tab. Refresh to see them.')
     return {'added': len(missing)}
@@ -291,7 +291,7 @@ def confirm_import(body:ImportInput,uid=Depends(user),s:Session=Depends(db)):
         if not value.external_id: data['external_id']=importers.key(value.source,f'{value.title}:{value.due}')
         existing=s.scalar(select(Task).where(Task.user_id==uid,Task.external_id==data['external_id']))
         if existing:
-            # Sync dates/titles, but retain the student's effort estimate and completion.
+
             for k in ('title','course','due'): setattr(existing,k,data[k])
             updated+=1
         else: s.add(Task(user_id=uid,**data)); added+=1

@@ -1,6 +1,6 @@
 # Self-hosting and shared deployments
 
-## Supported starting point
+## Starting setup
 
 Use `compose.yaml` for a single app process and PostgreSQL on one host. The app port is bound to loopback by default. Place a reverse proxy on that host in front of `127.0.0.1:8000` for public access.
 
@@ -37,6 +37,6 @@ The schema is created on startup. The beta onboarding update adds only the missi
 
 ## What this deployment does not provide
 
-No institutional compliance assessment, automated password recovery, campus SSO, distributed rate limiting, background sync, or high-availability architecture. Docker/PostgreSQL definitions are supplied, but were not executed in the authoring environment because no Docker daemon was available. Validate them on your own host before inviting others.
+No institutional compliance assessment, automated password recovery, campus SSO, distributed rate limiting, background sync, or high-availability architecture. Docker/PostgreSQL definitions are supplied, but were not executed in the local test environment because no Docker daemon was available. Validate them on your own host before inviting others.
 
 GitHub stores and distributes the code; a running server is separately required for a public app URL. Never turn an unrelated existing repository public to publish this project.

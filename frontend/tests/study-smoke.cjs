@@ -45,7 +45,7 @@ let studyPage;
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'test-results/hub-materials-offline-mobile.png',fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await context.setOffline(false);await page.getByText('All changes synced',{exact:true}).waitFor();
  const tasks=await page.evaluate(()=>fetch('/api/tasks').then(r=>r.json()));assert.equal(tasks.length,1);assert.equal(tasks[0].title,'Offline circuits review');assert.equal((await page.evaluate(()=>fetch('/api/preferences').then(r=>r.json()))).daily_minutes,75);
- // Server-side change while this device is offline must not be overwritten.
+
  await page.evaluate(async task=>{await fetch('/api/tasks/'+task.id,{method:'PUT',headers:{'Content-Type':'application/json','X-Requested-With':'StudentHub'},body:JSON.stringify({...task,title:'Changed on another device'})});},tasks[0]);
  await context.setOffline(true);await page.locator('nav').getByRole('button',{name:/Deadlines/}).click();await page.getByRole('button',{name:'Complete Offline circuits review',exact:true}).click();await page.getByText('1 changes waiting to sync',{exact:true}).waitFor();await context.setOffline(false);
  await page.getByRole('alert').filter({hasText:'changed on another device'}).waitFor();assert.equal((await page.evaluate(()=>fetch('/api/tasks').then(r=>r.json())))[0].done,false);

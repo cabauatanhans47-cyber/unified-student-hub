@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping students make their weeks more manageable.
+If you find a bug or want to improve something, open an issue or a focused pull request.
 
 1. Open an issue describing the user problem or bug. Include minimal reproduction steps, expected behavior, and actual behavior. Do not include student data, tokens, or private syllabi.
 2. Fork the repository and create a focused branch.
@@ -10,6 +10,6 @@ Thanks for helping students make their weeks more manageable.
 
 Use the existing module boundaries. Avoid committing databases, `.env`, credentials, uploads, dependency folders, or build output. Document user-visible limitations rather than hiding them behind placeholders.
 
-Good first contributions: recurrence expansion tests, per-day study windows, persistent planning preferences, and clearer importer feedback.
+Areas that still need work: recurring events, per-day study windows, and clearer import feedback.
 
 Contributions are provided under this project's MIT license. Be respectful, constructive, and welcoming in discussions.

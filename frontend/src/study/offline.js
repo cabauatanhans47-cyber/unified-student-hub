@@ -84,7 +84,7 @@ export async function api(path,options={}){
     }
     s.queue.push({request:operation,localId});await write('kv',key(current),s);signal();return result;
    });
-   // Queue first, then attempt sync. A dropped response is safe to retry.
+
    await syncNow();return result;
   }
   if(!navigator.onLine)throw new Error('This action needs internet. Your downloaded materials, deadlines, plan, and timer are available offline.');

@@ -164,8 +164,8 @@ def test_text_pdf_preview_extracts_deadline(client):
 
 
 def test_shared_proxy_does_not_pool_students(client):
-    # All requests use the same TestClient peer, as with one hosting proxy.
-    # More than 20 distinct students can attempt authentication independently.
+
+
     for i in range(25):
         response = client.post('/api/auth/login', json={
             'username': f'student_{i}', 'password': 'incorrect-password',
@@ -175,7 +175,7 @@ def test_shared_proxy_does_not_pool_students(client):
 
 
 def test_account_limit_shared_across_routes_case_and_forwarding_headers(client):
-    register(client, 'student')  # Registration counts as the first attempt.
+    register(client, 'student')                                             
     for i in range(19):
         response = client.post('/api/auth/login', json={
             'username': 'STUDENT' if i % 2 else 'student',
@@ -312,7 +312,7 @@ def test_additive_preferences_table_preserves_existing_sqlite_and_backup(tmp_pat
     from app.models import StudyPreferences, User, Task
     database=tmp_path/'existing.db'
     engine=create_engine('sqlite:///'+str(database))
-    # Simulate the previous release: the preferences table does not exist yet.
+
     Base.metadata.create_all(engine, tables=[t for t in Base.metadata.sorted_tables if t.name!='study_preferences'])
     with sessionmaker(bind=engine)() as session:
         session.add(User(id=1, username='existing', password='existing-hash'))
@@ -348,7 +348,7 @@ def test_hosted_postgres_urls_use_installed_driver_and_keep_tls(prefix):
     finally:
         engine.dispose()
 
-# Offline writes use account-bound, atomic receipts so a dropped response can retry.
+
 def sync_body(action, **values):
     from uuid import uuid4
     return dict(operation_id=str(uuid4()), account='student', action=action, **values)

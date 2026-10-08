@@ -1,7 +1,7 @@
 import {readdir,readFile,writeFile,cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {deflateSync} from 'node:zlib';
-// Small generated book icons keep installation assets local and reproducible.
+
 function crc(data){let c=0xffffffff;for(const b of data){c^=b;for(let i=0;i<8;i++)c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
 function chunk(type,data){const t=Buffer.from(type),size=Buffer.alloc(4),sum=Buffer.alloc(4);size.writeUInt32BE(data.length);sum.writeUInt32BE(crc(Buffer.concat([t,data])));return Buffer.concat([size,t,data,sum]);}
 for(const size of [192,512]){const raw=Buffer.alloc((size*4+1)*size);for(let y=0;y<size;y++)for(let x=0;x<size;x++){const a=x/size,b=y/size;const book=a>.23&&a<.77&&b>.27&&b<.73;const white=book&&(a<.26||a>.74||b<.30||b>.70||Math.abs(a-.5)<.015||((b>.42&&b<.445||b>.53&&b<.555)&&a>.32&&a<.68));const i=y*(size*4+1)+1+x*4;raw.set(white?[255,255,255,255]:[36,84,223,255],i);}const header=Buffer.alloc(13);header.writeUInt32BE(size);header.writeUInt32BE(size,4);header[8]=8;header[9]=6;await writeFile('dist/assets/icon-'+size+'.png',Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]));}

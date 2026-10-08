@@ -1,6 +1,6 @@
 # Release verification — v0.1
 
-## Passed in the authoring environment
+## Passed in the local test environment
 
 - 15 automated backend tests using FastAPI TestClient and SQLite.
 - Frontend production build with Vite.
@@ -23,7 +23,7 @@ Backend tests cover cross-account task/event isolation, logout revocation, missi
 ## Not verified here
 
 - Real Canvas or Moodle accounts. Adapters were checked with mocked HTTP responses; institutions differ in enabled endpoints, permissions, and deadline overrides.
-- Docker image execution or a running PostgreSQL service. Docker was unavailable in the authoring environment. Local runtime and API checks used SQLite.
+- Docker image execution or a running PostgreSQL service. Docker was unavailable in the local test environment. Local runtime and API checks used SQLite.
 - Load, penetration, independent accessibility, or formal security testing.
 - A public hosted deployment. The delivered package is source code with self-hosting configuration.
 
@@ -41,7 +41,7 @@ Screenshots use fabricated test-account data. They are examples of the implement
 - An additive-schema test starts with the previous SQLite tables and existing account/coursework rows, creates the new preferences table, and confirms that coursework and preferences survive a SQLite backup and restore.
 - The frontend production build passes.
 - `frontend/tests/beta-smoke.cjs` checks the actual browser flow: signup, three-step onboarding, keyboard sample activation, real deadline creation, saved hours after reload, sample cleanup without deleting coursework, a second account, syllabus import, and completion. It asserts no browser exceptions and no horizontal overflow at 390 px, and captures desktop/mobile screenshots.
-- The **Test and build** workflow runs this browser check and uploads screenshots. Consult the workflow run for the exact commit's pass/fail result. Local Chromium could not launch because this authoring environment disallows its required sockets; no local browser pass is claimed for this update.
+- The **Test and build** workflow runs this browser check and uploads screenshots. Consult the workflow run for the exact commit's pass/fail result. Local Chromium could not launch because this local test environment disallows its required sockets; no local browser pass is claimed for this update.
 - Permanent hosting, production PostgreSQL backups/restores, provider-edge abuse protection, and live school integrations remain unverified and unconfigured. See [beta launch gates](BETA.md).
 
 ## Render / Neon preparation

@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, String, Integer, Boolean, Text, UniqueCons
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 def normalize_database_url(value):
-    # Hosted providers supply standard PostgreSQL URLs; use our installed psycopg 3 driver.
+
     for prefix in ('postgres://', 'postgresql://'):
         if value.startswith(prefix):
             return 'postgresql+psycopg://' + value[len(prefix):]

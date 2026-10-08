@@ -18,7 +18,7 @@ async def preview(provider, base, token, course_ids):
     async with httpx.AsyncClient(timeout=20, follow_redirects=False, trust_env=False) as client:
         if provider == 'canvas':
             for course in course_ids:
-                # Sequential, bounded pagination using the fixed trusted endpoint.
+
                 for page in range(1,21):
                     res = await client.get(f'{base}/api/v1/courses/{course}/assignments', headers={'Authorization': f'Bearer {token}'}, params={'per_page':100,'page':page,'include[]':'submission'})
                     res.raise_for_status(); values = res.json()
@@ -35,7 +35,7 @@ async def preview(provider, base, token, course_ids):
             res.raise_for_status(); data = res.json()
             if 'exception' in data: raise ValueError('Moodle rejected the request. Check your token and enabled web-service functions.')
             for e in data.get('events', []):
-                # Only due/close action events are deadlines, not lecture start events.
+
                 if e.get('eventtype') not in ('due','close'): continue
                 if e.get('timestart'):
                     rows.append(candidate(e['name'], datetime.fromtimestamp(e['timestart'], timezone.utc), f'Course {e.get("courseid", "Moodle")}', 'moodle', f'{base}:{e["id"]}'))

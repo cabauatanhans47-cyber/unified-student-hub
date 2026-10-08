@@ -1,12 +1,10 @@
 # Unified Student Hub
 
-**Your deadlines, calendar, and a week you can actually manage.**
-
-An open-source, self-hostable student workspace by **Hans Luis Cabauatan**. Import coursework, review the dates, and turn estimated effort into a realistic seven-day study plan.
+I'm building a student workspace for deadlines, study materials, and weekly planning. It can import coursework, let you review the dates, and plan study time around your calendar.
 
 React · FastAPI · PostgreSQL · SQLite for local development · MIT license
 
-## What works in v0.1
+## Features
 
 - Separate student accounts with hashed passwords and server-side sessions.
 - Add, edit, complete, search, and delete deadlines; organize them by course.
@@ -22,7 +20,7 @@ React · FastAPI · PostgreSQL · SQLite for local development · MIT license
 
 ![Student Hub dashboard](docs/dashboard.png)
 
-**Release status:** functional initial release for local use and small self-hosted pilots. Live school integrations require school-issued tokens and have not been validated against a real institution in this release. See [verification and limits](docs/VERIFICATION.md).
+This is an early release for local use and small hosted pilots. School integrations need school-issued tokens and have not been tested against a real institution. See [test notes and limits](docs/VERIFICATION.md).
 
 ## Quick start: Docker + PostgreSQL
 
@@ -89,7 +87,7 @@ Follow the checklist on **Overview**: add a deadline, save study hours, then rev
 
 For the five-student pilot and remaining hosting work, see [the beta launch checklist](docs/BETA.md).
 
-## Try a full workflow
+## Trying the sample files
 
 1. Create an account and open **Imports → Syllabus**.
 2. Upload `samples/syllabus.txt` and click **Preview import**.
@@ -118,7 +116,7 @@ docker compose up -d --force-recreate app
 - Tokens are used for the current request, not saved in the database. Import again when you want refreshed deadlines. This version does not run background sync or OAuth.
 - If the institution disables token/API access, use a syllabus or ICS export instead.
 
-## Important behavior
+## Things to know
 
 - PDF extraction handles **text PDFs**, not scans. Supported dates: `YYYY-MM-DD` and full English month dates such as `January 2, 2030`. Every extracted date is a **candidate**, not a verified assignment. Defaults to 23:59 in the chosen import timezone. Always review the original document.
 - ICS recurring events are deliberately skipped with a visible warning. Export expanded individual occurrences or use single events. All-day busy events block the full local day; all-day deadlines default to 23:59.
@@ -157,7 +155,7 @@ npm run build --prefix frontend
 - Password recovery, campus SSO, and account deletion.
 - Database migrations, shared rate limiting, and larger deployment testing.
 
-These are future work, not current features. Contributions are welcome under the MIT license.
+These are still on the to-do list. Contributions are welcome under the MIT license.
 
 ## Offline materials and focus timer
 

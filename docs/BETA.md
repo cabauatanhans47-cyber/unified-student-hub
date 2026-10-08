@@ -1,6 +1,6 @@
 # Five-student beta
 
-## Implemented
+## What works
 
 - Private accounts and the existing deadlines, imports, calendar export, and planner.
 - An Overview checklist: add a deadline, save study hours, and review the weekly plan.
