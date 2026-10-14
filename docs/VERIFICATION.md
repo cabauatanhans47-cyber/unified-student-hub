@@ -1,6 +1,6 @@
-# Release verification — v0.1
+# Testing and verification
 
-## Passed in the local test environment
+## Initial local checks
 
 - 15 automated backend tests using FastAPI TestClient and SQLite.
 - Frontend production build with Vite.
@@ -10,24 +10,24 @@
 
 Backend tests cover cross-account task/event isolation, logout revocation, missing request-verification headers, invalid dates/timezones, preview-before-save, deduplication, preservation of completion/effort, oversized/invalid uploads, real text-PDF extraction, transaction rollback, capacity/deadline/busy-time scheduling, partial study blocks, daylight-saving changes, overdue/completed work, ICS all-day handling and recurrence warnings, LMS host validation, and mocked Canvas/Moodle request mapping.
 
-## Verified after publication
+## GitHub Actions check
 
 - GitHub Actions **Test and build** [run 36639017426](https://github.com/cabauatanhans47-cyber/unified-student-hub/actions/runs/36639017426) completed successfully for commit `31af6637f28e7cf0018b06739de6d96a94b022a3` on 2026-09-29 (UTC). The run and job steps were checked through the GitHub API: dependency installation, backend tests, and frontend production build all succeeded. This verifies that published commit; it does not establish Docker/PostgreSQL or live LMS verification.
 
-## Authentication throttle regression checks
+## Login and account rate limit tests
 
-- All 20 backend tests passed locally on Python 3.12 after the account-scoped throttle change (the original 15 tests plus five new regressions).
+- All 20 backend tests passed locally on Python 3.12 after the specific to each account throttle change (the original 15 tests plus five new regressions).
 - New checks cover independent students sharing one proxy, case-insensitive account limits shared across registration/login, ignored spoofed forwarding headers, cooldown expiry and `Retry-After`, successful-attempt counting, and concurrent calls.
-- The frontend was not changed. Hosting-edge limits, Docker/PostgreSQL execution, and real school integrations still require deployment-specific verification.
+- The frontend was not changed. Hosting-edge limits, Docker/PostgreSQL execution, and real school integrations still require specific to the deployment verification.
 
-## Not verified here
+## What those early checks did not cover
 
 - Real Canvas or Moodle accounts. Adapters were checked with mocked HTTP responses; institutions differ in enabled endpoints, permissions, and deadline overrides.
 - Docker image execution or a running PostgreSQL service. Docker was unavailable in the local test environment. Local runtime and API checks used SQLite.
 - Load, penetration, independent accessibility, or formal security testing.
-- A public hosted deployment. The delivered package is source code with self-hosting configuration.
+- A public hosted deployment. The delivered package is source code with running your own server configuration.
 
-## Reproduce
+## Run the checks yourself
 
 With Python 3.12 dependencies installed, run `python -m pytest -q` from the repository root (or inside `backend`). With Node.js 22+, run `npm ci --prefix frontend` and `npm run build --prefix frontend`.
 
@@ -35,7 +35,7 @@ A dependency emits a Starlette TestClient deprecation warning for httpx; it does
 
 Screenshots use fabricated test-account data. They are examples of the implemented interface, not activity from real students.
 
-## Student beta preparation
+## Beta testing updates
 
 - All 30 backend tests pass locally with Python 3.12. In addition to prior coverage, these verify saved preferences across login sessions, account isolation, invalid preferences, current sample dates, repeat sample addition, preservation of edited samples, safe sample cleanup, and request verification on new writes.
 - An additive-schema test starts with the previous SQLite tables and existing account/coursework rows, creates the new preferences table, and confirms that coursework and preferences survive a SQLite backup and restore.
@@ -44,14 +44,14 @@ Screenshots use fabricated test-account data. They are examples of the implement
 - The **Test and build** workflow runs this browser check and uploads screenshots. Consult the workflow run for the exact commit's pass/fail result. Local Chromium could not launch because this local test environment disallows its required sockets; no local browser pass is claimed for this update.
 - Permanent hosting, production PostgreSQL backups/restores, provider-edge abuse protection, and live school integrations remain unverified and unconfigured. See [beta launch gates](BETA.md).
 
-## Render / Neon preparation
+## Render and Neon checks
 
 - Three additional tests verify that provider PostgreSQL URLs select the installed psycopg 3 driver and preserve escaped passwords plus TLS/channel-binding parameters (33 backend cases in total).
 - The browser CI journey now uses a real disposable PostgreSQL 16 service, including account creation, task writes, preferences, samples, imports, completion, and account separation. Check the workflow run for the exact commit's result. This supplements the SQLite tests; it is not a test of Neon TLS or the Render Docker runtime.
 - `render.yaml` explicitly requests the Free plan, Singapore, secure cookies, and a private `DATABASE_URL` prompt. No hosting credentials are committed.
 
-## Student scheduling and Vercel preparation — 2026-10-14
+## Scheduling and Vercel checks (October 14, 2026)
 
 Local validation: 42 backend tests, 5 frontend unit tests, production Vite build, and all three Playwright browser smoke suites passed. Browser coverage includes 390px layouts, availability/class persistence, reminders, account export/recovery/deletion, offline reload/edit/reconnect/conflicts, PDF annotation export and backup, Office text previews, and timer persistence. The local browser server used SQLite; CI runs browser tests with PostgreSQL.
 
-Vercel assets copy and configuration were prepared. A production Vercel deployment and live PostgreSQL persistence check have not yet been performed.
+Vercel assets copy and configuration were prepared. At the time of this October 14 local verification, a production Vercel deployment and live PostgreSQL persistence check had not yet been performed. This historical result does not describe the current hosting status.
