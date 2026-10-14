@@ -1,15 +1,40 @@
 # Contributing
 
-If you find a bug or want to improve something, open an issue or a focused pull request.
+Thanks for taking an interest in Unified Student Hub.
 
-1. Open an issue describing the user problem or bug. Include minimal reproduction steps, expected behavior, and actual behavior. Do not include student data, tokens, or private syllabi.
-2. Fork the repository and create a focused branch.
-3. Follow the local setup in README.md. Keep code changes narrowly scoped and include meaningful tests for behavior changes.
-4. Run `python -m pytest -q` inside `backend`, and `npm run build` inside `frontend`.
-5. Open a pull request explaining what changed, why, and how you checked it. For interface changes, include desktop and mobile screenshots with fabricated sample data.
+If you find a bug or want to improve something, open an issue or send a focused pull request.
 
-Use the existing module boundaries. Avoid committing databases, `.env`, credentials, uploads, dependency folders, or build output. Document user-visible limitations rather than hiding them behind placeholders.
+## Before you start
 
-Areas that still need work: recurring events, per-day study windows, and clearer import feedback.
+Please do not include real student data, private syllabi, passwords, tokens, cookies, or other sensitive information in issues, screenshots, or commits.
 
-Contributions are provided under this project's MIT license. Be respectful, constructive, and welcoming in discussions.
+## Suggested workflow
+
+1. Open an issue that explains the problem or improvement.
+2. Include simple reproduction steps when reporting a bug.
+3. Fork the repository and create a branch for the change.
+4. Follow the local setup in the root README.
+5. Keep the change focused.
+6. Add or update tests when behavior changes.
+7. Run the checks before opening a pull request.
+
+Backend tests:
+
+```bash
+cd backend
+python -m pytest -q
+```
+
+Frontend build:
+
+```bash
+npm run build --prefix frontend
+```
+
+For interface changes, include desktop and mobile screenshots using fake sample data.
+
+Please avoid committing local databases, `.env` files, credentials, uploads, dependency folders, or build output.
+
+If a limitation is user visible, document it instead of hiding it behind placeholder behavior.
+
+Contributions are provided under the MIT license. Keep discussions respectful and constructive.
