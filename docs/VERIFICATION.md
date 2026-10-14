@@ -49,3 +49,9 @@ Screenshots use fabricated test-account data. They are examples of the implement
 - Three additional tests verify that provider PostgreSQL URLs select the installed psycopg 3 driver and preserve escaped passwords plus TLS/channel-binding parameters (33 backend cases in total).
 - The browser CI journey now uses a real disposable PostgreSQL 16 service, including account creation, task writes, preferences, samples, imports, completion, and account separation. Check the workflow run for the exact commit's result. This supplements the SQLite tests; it is not a test of Neon TLS or the Render Docker runtime.
 - `render.yaml` explicitly requests the Free plan, Singapore, secure cookies, and a private `DATABASE_URL` prompt. No hosting credentials are committed.
+
+## Student scheduling and Vercel preparation — 2026-10-14
+
+Local validation: 42 backend tests, 5 frontend unit tests, production Vite build, and all three Playwright browser smoke suites passed. Browser coverage includes 390px layouts, availability/class persistence, reminders, account export/recovery/deletion, offline reload/edit/reconnect/conflicts, PDF annotation export and backup, Office text previews, and timer persistence. The local browser server used SQLite; CI runs browser tests with PostgreSQL.
+
+Vercel assets copy and configuration were prepared. A production Vercel deployment and live PostgreSQL persistence check have not yet been performed.

@@ -8,3 +8,8 @@ export async function remove(store,key){const db=await database();return new Pro
 export async function list(store,prefix){const db=await database();return new Promise((resolve,reject)=>{const r=db.transaction(store).objectStore(store).getAll();r.onsuccess=()=>resolve(r.result.filter(x=>x.key.startsWith(prefix)).map(x=>x.value));r.onerror=()=>reject(r.error);});}
 export function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 export function locked(fn){if(!navigator.locks)throw new Error('This browser needs Web Locks for safe offline editing. Use a recent browser.');return navigator.locks.request('student-hub-device-write',fn);}
+
+export async function purgeAccount(username){
+ const db=await database();
+ return new Promise((resolve,reject)=>{const tx=db.transaction(['kv','materials'],'readwrite');for(const store of ['kv','materials']){const request=tx.objectStore(store).openCursor();request.onsuccess=()=>{const c=request.result;if(!c)return;if(String(c.key).startsWith(username+':'))c.delete();c.continue();};}tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+}

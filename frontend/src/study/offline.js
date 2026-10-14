@@ -1,4 +1,4 @@
-import {read,write,locked,download} from './storage';
+import {read,write,locked,download,purgeAccount} from './storage';
 import {offlinePlan} from './planner';
 let current=null;
 export const signal=()=>window.dispatchEvent(new Event('hub-offline-change'));
@@ -13,9 +13,9 @@ export async function enableOffline(){
  if(!('serviceWorker' in navigator)||!navigator.locks)throw new Error('Offline access needs a recent browser with service workers and Web Locks.');
  if((await offlineStatus())?.enabled)return;
  const user=current;
- const [tasks,events,preferences]=await Promise.all([network('/tasks'),network('/events'),network('/preferences')]);
+ const [tasks,events,preferences,studentSettings]=await Promise.all([network('/tasks'),network('/events'),network('/preferences'),network('/student-settings')]);
  await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;
- await locked(()=>write('kv',key(user),{enabled:true,tasks,events,preferences,queue:[],error:'',lastSync:new Date().toISOString()}));
+ await locked(()=>write('kv',key(user),{enabled:true,tasks,events,preferences,studentSettings,queue:[],error:'',lastSync:new Date().toISOString()}));
  await write('kv','active-offline-user',user);signal();
 }
 export async function syncNow(){
@@ -35,8 +35,8 @@ export async function syncNow(){
     }
     await write('kv',key(account),state);
    }
-   const [tasks,events,preferences]=await Promise.all([network('/tasks'),network('/events'),network('/preferences')]);
-   state={...state,tasks,events,preferences,error:'',lastSync:new Date().toISOString()};
+   const [tasks,events,preferences,studentSettings]=await Promise.all([network('/tasks'),network('/events'),network('/preferences'),network('/student-settings')]);
+   state={...state,tasks,events,preferences,studentSettings,error:'',lastSync:new Date().toISOString()};
   }catch(e){state.error=e.status===401?'Sign in again online to sync. Your pending changes are kept.':e.message;}
   await write('kv',key(account),state);signal();
  });
@@ -61,7 +61,8 @@ export async function api(path,options={}){
  const state=await offlineStatus();
  if(state?.enabled){
   if(method==='GET'&&['/tasks','/events','/preferences'].includes(path))return path==='/tasks'?[...state.tasks].sort((a,b)=>Date.parse(a.due)-Date.parse(b.due)):state[path.slice(1)];
-  if(path.startsWith('/plan?')){const settings=Object.fromEntries(new URLSearchParams(path.split('?')[1]));return offlinePlan(state.tasks,state.events,settings);}
+  if(method==='GET'&&path==='/student-settings'&&state.studentSettings)return state.studentSettings;
+  if(path.startsWith('/plan?')){const settings=Object.fromEntries(new URLSearchParams(path.split('?')[1]));return offlinePlan(state.tasks,state.events,{...settings,studentSettings:state.studentSettings});}
   if(path==='/preferences/plan-seen')return locked(async()=>{const s=await offlineStatus();s.preferences.plan_seen=true;await write('kv',key(current),s);return s.preferences;});
   if((path.startsWith('/tasks')&&method!=='GET')||(path==='/preferences'&&method==='PUT')){
    const result=await locked(async()=>{
@@ -94,3 +95,5 @@ export async function api(path,options={}){
  return network(path,options);
 }
 window.addEventListener('online',()=>syncNow().catch(()=>{}));
+
+export async function clearAccountDevice(username){await purgeAccount(username);current=null;await write('kv','active-offline-user',null);await write('kv','pending-logout',false);signal();}

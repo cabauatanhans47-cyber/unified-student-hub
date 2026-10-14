@@ -7,17 +7,19 @@ def stamp(value):
     if dt.tzinfo is None: raise ValueError('An explicit timezone is required')
     return dt
 
-def plan_week(tasks, events, start, tz, start_hour=17, end_hour=21, daily_minutes=120, now=None):
+def plan_week(tasks, events, start, tz, start_hour=17, end_hour=21, daily_minutes=120, now=None, day_settings=None):
     zone = ZoneInfo(tz)
     now = now or datetime.now(timezone.utc)
     days, slots, warnings = [], [], []
     busy = [(stamp(e['start']), stamp(e['end'])) for e in events]
     for offset in range(7):
         day = start + timedelta(days=offset)
-        days.append({'date': day.isoformat(), 'minutes': 0, 'capacity': daily_minutes, 'sessions': []})
+        config=day_settings[day.weekday()] if day_settings else {'enabled':True,'start_hour':start_hour,'end_hour':end_hour,'daily_minutes':daily_minutes}
+        days.append({'date': day.isoformat(), 'minutes': 0, 'capacity': config['daily_minutes'] if config['enabled'] else 0, 'sessions': []})
+        if not config['enabled']: continue
 
-        cursor = datetime.combine(day, time(start_hour), zone).astimezone(timezone.utc)
-        stop = datetime.combine(day, time(end_hour), zone).astimezone(timezone.utc)
+        cursor = datetime.combine(day, time(config['start_hour']), zone).astimezone(timezone.utc)
+        stop = datetime.combine(day, time(config['end_hour']), zone).astimezone(timezone.utc)
         while cursor + timedelta(minutes=30) <= stop:
             end = cursor + timedelta(minutes=30)
             if cursor >= now and not any(cursor < b and end > a for a,b in busy):

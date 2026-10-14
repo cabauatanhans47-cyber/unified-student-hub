@@ -9,7 +9,7 @@ Use `compose.yaml` for a single app process and PostgreSQL on one host. The app 
 3. Set `COOKIE_SECURE=true` so session cookies are sent only over HTTPS.
 4. Set exact trusted `LMS_ALLOWED_HOSTS` if you need LMS import. Never allow arbitrary user-provided hosts, metadata services, or internal management endpoints. Use outbound network restrictions in a shared deployment.
 5. Limit request bodies at the proxy to approximately 3 MB and apply per-client request/rate limits to authentication and upload paths. The app limits parsed files to 2 MB and 50 PDF pages; parsing untrusted PDFs still consumes resources.
-6. Keep one app worker for this release. Its authentication throttle allows 20 attempts per normalized username in a rolling five-minute window, shared across login and registration. Students behind a proxy or campus NAT do not share this account allowance. Successful and unsuccessful attempts both count; a 429 response includes `Retry-After`. The app does not use forwarding headers for this limit. Counters are in memory and reset on restart. Before using multiple workers or replicas, move counters to a shared rate-limit store. Account throttling does not stop attempts spread across many usernames: retain aggregate/per-client rate limits at the trusted reverse proxy or hosting edge, using only that provider's verified client-IP mechanism. Do not trust arbitrary `X-Forwarded-For` headers.
+6. Authentication uses both a process-local rolling throttle and database-backed fixed-window counters: 20 attempts per normalized username per five minutes across login and registration. Recovery and sensitive account actions have separate 10-attempt limits. Successful and unsuccessful attempts count. Database counters survive restarts and are shared across workers. This does not stop attempts across many usernames; retain aggregate/per-client limits at the trusted hosting edge. Never trust arbitrary forwarding headers.
 7. After desired users register, set `ALLOW_REGISTRATION=false` to close registration, then recreate the app container.
 8. Back up PostgreSQL and test restore before relying on it.
 
@@ -37,6 +37,6 @@ The schema is created on startup. The beta onboarding update adds only the missi
 
 ## What this deployment does not provide
 
-No institutional compliance assessment, automated password recovery, campus SSO, distributed rate limiting, background sync, or high-availability architecture. Docker/PostgreSQL definitions are supplied, but were not executed in the local test environment because no Docker daemon was available. Validate them on your own host before inviting others.
+No institutional compliance assessment, email-based password recovery, campus SSO, closed-app background sync, or high-availability architecture. Docker/PostgreSQL definitions are supplied, but were not executed in the local test environment because no Docker daemon was available. Validate them on your own host before inviting others.
 
 GitHub stores and distributes the code; a running server is separately required for a public app URL. Never turn an unrelated existing repository public to publish this project.

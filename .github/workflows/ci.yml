@@ -51,6 +51,7 @@ jobs:
           cd frontend
           node tests/beta-smoke.cjs
           node tests/study-smoke.cjs
+          node tests/student-features-smoke.cjs
       - name: Save browser screenshots
         if: always()
         uses: actions/upload-artifact@v4

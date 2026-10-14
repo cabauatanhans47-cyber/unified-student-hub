@@ -24,3 +24,12 @@ test('offline plan handles DST in UTC and reports overdue and insufficient time'
  const p=offlinePlan([{id:1,title:'Reading',due:'2030-03-10T09:00:00Z',minutes:180,done:false},{id:2,title:'Old',due:'2029-01-01T00:00:00Z',minutes:30,done:false}],[],{start:'2030-03-10',tz:'America/New_York',start_hour:1,end_hour:4,daily_minutes:180},Date.parse('2030-03-10T00:00:00Z'));
  assert.equal(p.days[0].minutes,120);assert.equal(p.warnings.length,2);assert.equal(p.warnings[1].minutes,60);
 });
+
+test('custom weekdays and weekly classes constrain the offline plan',()=>{
+ const days=Array.from({length:7},()=>({enabled:false,start_hour:17,end_hour:20,daily_minutes:120}));days[0].enabled=true;
+ const settings={start:'2030-01-07',tz:'Asia/Manila',studentSettings:{custom_days:true,days,classes:[{weekday:0,start_time:'17:00',end_time:'18:00',first_date:'2030-01-01',last_date:'2030-01-31'}]}};
+ const p=offlinePlan([{id:1,title:'Lab',course:'CPE',due:'2030-01-08T23:59:00+08:00',minutes:180,done:false}],[],settings,Date.parse('2030-01-07T00:00:00Z'));
+ assert.equal(p.scheduled_minutes,120);assert.equal(p.warnings[0].minutes,60);
+ assert.equal(p.days[0].sessions[0].start,'2030-01-07T10:00:00.000Z');
+ assert.ok(p.days.slice(1).every(d=>d.minutes===0));
+});

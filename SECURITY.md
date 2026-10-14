@@ -6,6 +6,8 @@ Do not post access tokens, passwords, cookies, private documents, or exploit det
 
 The app uses Argon2 password hashes, random revocable sessions, per-user ownership checks, request verification headers, and exact operator-controlled LMS hostname allowlists. Tokens are not intentionally persisted; avoid enabling HTTP request-body/debug logging that could capture them.
 
-Serve shared deployments over HTTPS with `COOKIE_SECURE=true`, reverse-proxy body/rate limits, constrained outbound access, and regular database backups. Read `docs/DEPLOYMENT.md` for the single-process throttle limitation.
+Serve shared deployments over HTTPS with `COOKIE_SECURE=true`, reverse-proxy body/rate limits, constrained outbound access, and regular database backups. Read `docs/DEPLOYMENT.md` for authentication throttling and hosting controls.
 
-Known limitations: no password recovery or self-service account deletion, no distributed throttling, no schema migrations, and PDF parsing runs in the application process. Do not open unrestricted public registration on an unmonitored server. Keep dependencies updated and test them before deploying upgrades.
+Known limitations: no email-based recovery, no versioned schema migrations, and PDF parsing runs in the application process. Do not open unrestricted public registration on an unmonitored server. Keep dependencies updated and test them before deploying upgrades.
+
+Recovery uses a pre-generated single-use secret stored only as a SHA-256 digest. Reset revokes all server sessions; previously saved offline device copies must be cleared on those devices. Authentication and sensitive-action counters are stored in the database across instances.

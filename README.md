@@ -6,6 +6,11 @@ React · FastAPI · PostgreSQL · SQLite for local development · MIT license
 
 ## Features
 
+- Per-day study availability and manual recurring classes or work shifts.
+- Log study minutes against remaining deadline effort.
+- Optional in-app/browser reminders and calendar export alerts.
+- Single-use recovery codes, account data export, and account deletion.
+
 - Separate student accounts with hashed passwords and server-side sessions.
 - Add, edit, complete, search, and delete deadlines; organize them by course.
 - Review-first PDF/TXT syllabus extraction. Edit titles, dates, courses, and effort before saving.
@@ -123,13 +128,15 @@ docker compose up -d --force-recreate app
 - Planning uses one daily time window for all seven days, earliest due date first, and a daily budget. It is deterministic, not an AI prediction. A busy event overlapping a 30-minute grid block excludes that whole block. It schedules only future time and reports leftover effort.
 - Planning does not mark work complete or track elapsed study time. Update the remaining minutes as you work. Timezone, study hours, and daily budget are saved to your account when you select **Save preferences & update plan**. The displayed week starts on the current device date when you return; a manually selected week is not saved.
 - Re-imported matching deadlines update their title, course, and date but keep your completion flag and effort. Imported busy events match by ICS UID; changing a syllabus line creates a new candidate. There is no automatic deletion when a source item disappears.
-- No email, password reset, OAuth, notifications, recurring calendar expansion, or university SSO yet.
+- Recovery requires a code generated in Account settings before forgetting your password. Reminders run while the app is open; calendar exports include alerts when enabled. No email delivery, OAuth, background push, ICS recurrence expansion, or university SSO yet.
 
 ## Share with other people
 
 Making the repository public lets others download, fork, extend, and self-host it. A GitHub repository alone does **not** run this backend. GitHub Pages cannot host FastAPI/PostgreSQL.
 
-For the free student beta, follow the [Render + Neon setup guide](docs/RENDER_NEON.md); the included `render.yaml` preconfigures the Free web service.
+For Vercel hosting, follow the [Vercel deployment guide](docs/VERCEL.md). The repository includes the FastAPI entrypoint and frontend build configuration; a persistent PostgreSQL database is required.
+
+For an alternative student beta setup, follow the [Render + Neon setup guide](docs/RENDER_NEON.md); the included `render.yaml` preconfigures the Free web service.
 
 For a shared browser URL, deploy the Docker app behind an HTTPS reverse proxy and a durable PostgreSQL database. Follow [deployment notes](docs/DEPLOYMENT.md). This initial release is not a managed campus-wide service or an uptime promise.
 
@@ -149,11 +156,11 @@ npm run build --prefix frontend
 
 ## Roadmap
 
-- Recurring calendar expansion and per-day availability.
-- Progress tracking (study preferences are already persistent).
+- Imported ICS recurrence expansion (manual weekly classes are supported).
+- Study history and analytics (logging minutes already updates remaining effort).
 - OAuth integrations and opt-in scheduled sync.
-- Password recovery, campus SSO, and account deletion.
-- Database migrations, shared rate limiting, and larger deployment testing.
+- Email-based recovery and campus SSO.
+- Versioned database migrations and larger deployment testing.
 
 These are still on the to-do list. Contributions are welcome under the MIT license.
 

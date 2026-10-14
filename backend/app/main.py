@@ -15,7 +15,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFi
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from icalendar import Calendar, Event
@@ -23,10 +23,16 @@ import httpx
 from .models import Base, engine, db, User, LoginSession, Task, BusyEvent, StudyPreferences, SyncReceipt
 from .planner import plan_week, stamp
 from . import importers, lms
+from .student_features import install_routes, settings_for, class_events, shared_throttle
 
 @asynccontextmanager
 async def lifespan(app):
-    Base.metadata.create_all(engine)
+    configured = os.getenv('DATABASE_URL','').startswith(('postgres://','postgresql://','postgresql+psycopg://'))
+    if not os.getenv('VERCEL') or configured:
+        with engine.begin() as connection:
+            if connection.dialect.name == 'postgresql':
+                connection.execute(text('SELECT pg_advisory_xact_lock(7241039)'))
+            Base.metadata.create_all(connection)
     yield
 app = FastAPI(title='Unified Student Hub API', version='0.1.0', lifespan=lifespan)
 hasher = PasswordHasher()
@@ -43,6 +49,8 @@ def user(request: Request, s: Session = Depends(db)):
 
 @app.middleware('http')
 async def guard(request, call_next):
+    if os.getenv('VERCEL') and not os.getenv('DATABASE_URL','').startswith(('postgres://','postgresql://','postgresql+psycopg://')) and request.url.path.startswith('/api/'):
+        return Response('{"detail":"The server needs a PostgreSQL DATABASE_URL. Please finish database setup in Vercel."}',status_code=503,media_type='application/json',headers={'Cache-Control':'no-store'})
     if request.method in ('POST','PUT','PATCH','DELETE') and request.url.path.startswith('/api/'):
         if request.headers.get('x-requested-with') != 'StudentHub':
             return Response('Missing request verification header', status_code=403)
@@ -79,11 +87,12 @@ def login_cookie(response, s, uid):
     s.execute(delete(LoginSession).where(LoginSession.expires < int(time.time())))
     token = secrets.token_urlsafe(32)
     s.add(LoginSession(token=digest(token),user_id=uid,expires=int(time.time())+7*86400)); s.commit()
-    response.set_cookie('hub_session',token,httponly=True,samesite='lax',secure=os.getenv('COOKIE_SECURE','false').lower()=='true',max_age=7*86400,path='/')
+    response.set_cookie('hub_session',token,httponly=True,samesite='lax',secure=os.getenv('COOKIE_SECURE','true' if os.getenv('VERCEL') else 'false').lower()=='true',max_age=7*86400,path='/')
 
 @app.post('/api/auth/register')
 def register(body: Credentials, request: Request, response: Response, s: Session=Depends(db)):
     throttle(body.username)
+    shared_throttle(s,"auth:"+body.username.lower())
     if os.getenv('ALLOW_REGISTRATION','true').lower() != 'true': raise HTTPException(403,'Registration is closed.')
     u = User(username=body.username.lower(),password=hasher.hash(body.password)); s.add(u)
     try: s.commit()
@@ -94,6 +103,7 @@ def register(body: Credentials, request: Request, response: Response, s: Session
 @app.post('/api/auth/login')
 def login(body: Credentials, request: Request, response: Response, s: Session=Depends(db)):
     throttle(body.username)
+    shared_throttle(s,"auth:"+body.username.lower())
     u = s.scalar(select(User).where(User.username==body.username.lower()))
     try: hasher.verify(u.password if u else DUMMY_HASH,body.password)
     except (VerifyMismatchError,InvalidHashError): raise HTTPException(401,'Incorrect username or password.')
@@ -310,7 +320,9 @@ def confirm_import(body:ImportInput,uid=Depends(user),s:Session=Depends(db)):
 def plan(start:date,tz:str='Asia/Manila',start_hour:int=Query(17,ge=0,le=22),end_hour:int=Query(21,ge=1,le=23),daily_minutes:int=Query(120,ge=30,le=720),uid=Depends(user),s:Session=Depends(db)):
     valid_zone(tz)
     if end_hour<=start_hour: raise HTTPException(422,'End hour must follow start hour.')
-    return plan_week(tasks(uid,s),events(uid,s),start,tz,start_hour,end_hour,daily_minutes)
+    advanced=settings_for(s,uid)
+    return plan_week(tasks(uid,s),events(uid,s)+class_events(advanced,start,tz),start,tz,start_hour,end_hour,daily_minutes,
+                     day_settings=advanced['days'] if advanced['custom_days'] else None)
 @app.get('/api/export/calendar')
 def export(uid=Depends(user),s:Session=Depends(db)):
     cal=Calendar(); cal.add('prodid','-//Unified Student Hub//EN'); cal.add('version','2.0')
@@ -378,6 +390,8 @@ def sync_mutation(body:SyncInput, uid=Depends(user), s:Session=Depends(db)):
 
 @app.get('/api/health')
 def health(): return {'status':'ok'}
+
+install_routes(app,user,hasher)
 
 frontend=Path(os.getenv('FRONTEND_DIST',str(Path(__file__).resolve().parents[2]/'frontend'/'dist')))
 if frontend.is_dir():

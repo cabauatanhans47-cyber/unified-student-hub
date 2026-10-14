@@ -10,8 +10,10 @@ def normalize_database_url(value):
             return 'postgresql+psycopg://' + value[len(prefix):]
     return value
 
-database_url = normalize_database_url(os.getenv('DATABASE_URL', 'sqlite:///./hub.db'))
+database_url = normalize_database_url(os.getenv('DATABASE_URL', 'sqlite:////tmp/unconfigured-hub.db' if os.getenv('VERCEL') else 'sqlite:///./hub.db'))
+from sqlalchemy.pool import NullPool
 engine = create_engine(database_url, pool_pre_ping=True,
+                       **({'poolclass': NullPool} if os.getenv('VERCEL') and not database_url.startswith('sqlite:') else {}),
                        **({'connect_args': {'check_same_thread': False}} if database_url.startswith('sqlite:') else {}))
 SessionLocal = sessionmaker(bind=engine)
 class Base(DeclarativeBase): pass
@@ -63,3 +65,17 @@ class BusyEvent(Base):
     external_id: Mapped[str] = mapped_column(String(64))
 def db():
     with SessionLocal() as s: yield s
+
+class StudentSettings(Base):
+    __tablename__ = 'student_settings'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    data: Mapped[str] = mapped_column(Text)
+class RecoveryKey(Base):
+    __tablename__ = 'recovery_keys'
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), primary_key=True)
+    digest: Mapped[str] = mapped_column(String(64))
+class AuthThrottle(Base):
+    __tablename__ = 'auth_throttles'
+    bucket: Mapped[str] = mapped_column(String(64),primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer)
+    window_start: Mapped[int] = mapped_column(Integer,index=True)

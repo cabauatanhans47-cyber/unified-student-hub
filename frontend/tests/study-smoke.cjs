@@ -23,7 +23,7 @@ let studyPage;
  await page.locator('.material-card').filter({hasText:'lecture.pptx'}).click();await page.getByText('Slide 1\nVoltage and current',{exact:true}).waitFor();
  await page.locator('.material-card').filter({hasText:'circuits.pdf'}).click();await page.getByText('PDF ready · annotations saved on device',{exact:true}).waitFor();
  await page.getByLabel('PDF tool',{exact:true}).selectOption('highlight');
- await page.locator('.pdf-stage').scrollIntoViewIfNeeded();
+ await page.locator('.pdf-stage').evaluate(el=>el.scrollIntoView({block:'start'}));
  const box=await page.locator('.pdf-overlay').boundingBox();
  await page.mouse.move(box.x+box.width*.08,box.y+box.height*.08);await page.mouse.down();await page.mouse.move(box.x+box.width*.8,box.y+box.height*.14,{steps:8});await page.mouse.up();
  await page.getByRole('button',{name:'Undo annotation',exact:true}).waitFor();
