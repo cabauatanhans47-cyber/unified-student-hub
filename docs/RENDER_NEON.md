@@ -1,8 +1,8 @@
-# Free beta setup: Render + Neon
+# Hosting with Render and Neon
 
-The root `render.yaml` creates one Free Docker web service in Singapore. It does not create a Render database or a paid resource. It enables secure cookies and waits for passing CI checks before automatic deployments. It prompts for `DATABASE_URL` privately during Blueprint setup.
+The root `render.yaml` creates one Free Docker web service in Singapore. It does not create a Render database or intentionally provision any paid resources. It enables secure cookies and waits for passing CI checks before automatic deployments. It prompts for `DATABASE_URL` privately during Blueprint setup.
 
-## 1. Create the Neon database
+## 1. Set up PostgreSQL on Neon
 
 1. In the Neon dashboard, create a project named `unified-student-hub` on the Free plan.
 2. Select AWS and the Singapore (`ap-southeast-1`) region to match the web service. Keep the default PostgreSQL version and database name unless you have a reason to change them.
@@ -11,7 +11,7 @@ The root `render.yaml` creates one Free Docker web service in Singapore. It does
 
 The app automatically selects its installed psycopg 3 driver for standard `postgresql://` and legacy `postgres://` URLs. Pool pre-ping replaces stale connections when they are checked out; it is not a periodic keepalive and does not prevent either provider from sleeping.
 
-## 2. Deploy on Render
+## 2. Set up the Render service
 
 1. In the Render dashboard, select **New → Blueprint**.
 2. Connect GitHub if needed, allowing access to `cabauatanhans47-cyber/unified-student-hub`.
@@ -22,9 +22,9 @@ The app automatically selects its installed psycopg 3 driver for standard `postg
 
 The Dockerfile already builds the React frontend and runs FastAPI on port 8000. Do not set a separate static-site publish directory or add another frontend service. `COOKIE_SECURE=true` is already configured. LMS imports remain disabled until approved hostnames are configured.
 
-## 3. Verify the real deployment
+## 3. Test the deployed app
 
-The Neon database starts empty. Codespaces accounts and deadlines are not automatically copied. Create a new account on the hosted app, then:
+A new Neon database starts empty. Codespaces accounts and deadlines are not automatically copied. Create a new account on the hosted app, then:
 
 - Add sample deadlines, save study hours, and open the weekly plan.
 - Add a real test deadline, then remove samples and confirm the real task stays.
@@ -32,9 +32,9 @@ The Neon database starts empty. Codespaces accounts and deadlines are not automa
 - Restart the web service and repeat the checks. Use a second account to verify separation.
 - Before inviting classmates, test a private PostgreSQL backup and restore into a separate database, and resolve the hosting-edge abuse-protection items in [BETA.md](BETA.md). Those are not automatically provisioned by this Blueprint.
 
-During the small invited signup window registration is enabled. After the testers register, change `ALLOW_REGISTRATION` to `false` in `render.yaml` and commit it, so future Blueprint syncs preserve that choice. Existing users can still sign in.
+Registration is enabled during the initial invitation period. After the testers register, change `ALLOW_REGISTRATION` to `false` in `render.yaml` and commit it, so future Blueprint syncs preserve that choice. Existing users can still sign in.
 
-## Limits and troubleshooting
+## Things to watch for
 
 - Render Free sleeps after 15 minutes without incoming traffic and can take about a minute to wake. The public address stays the same, but this is not an always-on service or an uptime guarantee.
 - Render's local filesystem is temporary. All shared account/coursework data must use Neon, not SQLite.
