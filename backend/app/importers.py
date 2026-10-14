@@ -1,4 +1,3 @@
-"""Bounded, review-first importers. No imported file is retained."""
 import hashlib, io, re
 from datetime import datetime, date, time, timedelta
 from zoneinfo import ZoneInfo

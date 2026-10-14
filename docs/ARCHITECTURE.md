@@ -1,37 +1,82 @@
 # Architecture
 
+The project is split into a React frontend and a FastAPI backend.
+
 ```text
-frontend/src/       React UI: account, deadlines, imports, weekly plan
+frontend/src/       React interface and offline study features
 backend/app/
-  main.py          FastAPI routes, session auth, validation, import confirmation
-  models.py        SQLAlchemy tables and request-scoped sessions
-  importers.py     PDF/TXT extraction and ICS parsing
-  lms.py           HTTPS allowlisted Canvas/Moodle adapters
-  planner.py       Pure scheduling function; no network/database dependency
-backend/tests/     API isolation, import, and planner tests
+  main.py           API routes, authentication, validation, and imports
+  models.py         SQLAlchemy models and database sessions
+  importers.py      PDF, TXT, and ICS parsing
+  lms.py            Canvas and Moodle adapters
+  planner.py        Weekly scheduling logic
+  student_features.py
+                    Account, reminder, and scheduling features
+backend/tests/      Backend tests
 ```
 
-## Data flow
+## How data moves through the app
 
-1. A student signs in and receives a random HttpOnly session cookie. The database stores a SHA-256 digest of the token with an expiry. Passwords use Argon2.
-2. Account-scoped endpoints filter all tasks and events by the authenticated user ID. The client never chooses that ID.
-3. Imports produce unsaved candidates. The student reviews, edits, and removes candidates before the confirmation endpoint applies changes in one transaction.
-4. Stable source IDs become per-user deduplication keys. Importing matching items updates dates and titles while retaining task effort/completion.
-5. The planner receives tasks, busy intervals, a local start date, timezone, daily time window, and capacity. It iterates UTC slots to avoid DST duplication, rejects past/occupied time, and allocates earliest deadlines first.
-6. `study_preferences` stores one row per user: timezone, hours, daily budget, and whether the student has reviewed a saved plan. `/api/preferences` reads/writes only the authenticated account. The week start date remains visit-specific.
-7. `/api/sample-workspace` adds or removes three account-scoped practice tasks using reserved stable IDs and a `sample` source. Repeated additions preserve edits and completion. Removal requires both the sample source and a reserved ID.
-8. FastAPI serves the compiled frontend in production. Vite proxies `/api` during frontend development.
+1. A student signs in and receives an HttpOnly session cookie.
+2. The database stores a SHA 256 digest of that session token with an expiry time.
+3. Passwords are hashed with Argon2.
+4. API requests use the authenticated account ID from the session. The browser does not choose a user ID.
+5. Imports first create a preview. Nothing is saved until the student confirms it.
+6. Imported items use stable IDs when possible so repeated imports can update matching records instead of creating duplicates.
+7. The planner receives deadlines, busy times, study hours, and daily capacity, then builds a schedule without calling external services.
+8. FastAPI serves the built frontend in production. During development, Vite proxies API requests to FastAPI.
 
-## Extend it
+## Planner
 
-- **New importer:** return `{tasks, events, warnings}` matching `TaskInput`/`EventInput`. Supply a stable `external_id`, use timezone-aware timestamps, and add a review screen. Add your source to the source enum. Never save directly from the preview endpoint.
-- **Planner changes:** modify the pure `plan_week` function and add invariant tests for no overlaps, capacity limits, deadline limits, and timezone boundaries.
-- **New database columns:** introduce a migration tool before changing an installed database. `create_all()` only creates missing tables; it does not migrate them.
-- **New integration:** keep credentials transient or design encrypted storage deliberately. Use exact operator-managed host allowlists, HTTPS, disabled redirects, bounded calls, and institution-supported APIs.
+The planner uses the earliest deadlines first.
+
+It considers:
+
+- remaining task effort
+- deadline dates
+- busy calendar events
+- recurring classes
+- the selected timezone
+- allowed study hours
+- the daily study budget
+
+The planner is deterministic and does not rely on an AI model.
+
+## Extending the project
+
+### Adding an importer
+
+Return `tasks`, `events`, and `warnings` in the same shape used by the existing import flow.
+
+Use stable external IDs when possible and keep timestamps timezone aware.
+
+Preview endpoints should not save data directly.
+
+### Changing the planner
+
+Keep `plan_week` independent from the network and database.
+
+Add tests for overlaps, capacity, deadlines, and timezone behavior when the scheduling logic changes.
+
+### Changing the database
+
+The project currently creates missing tables on startup but does not have a full migration framework.
+
+Do not assume an existing database can be safely changed by editing a model alone.
+
+Add a proper migration path before introducing breaking schema changes.
+
+### Adding integrations
+
+Keep credentials temporary unless encrypted storage is intentionally designed.
+
+Use HTTPS, bounded requests, exact trusted hostnames, and supported institution APIs.
 
 ## API examples
 
-Interactive schemas: `/docs`. Authentication is cookie-based. Write requests need the verification header:
+Interactive API documentation is available at `/docs`.
+
+Write requests use the verification header shown below.
 
 ```bash
 curl -c cookies.txt -H 'Content-Type: application/json' \
@@ -43,11 +88,10 @@ curl -b cookies.txt \
   'http://localhost:8000/api/plan?start=2030-01-01&tz=Asia%2FManila&start_hour=17&end_hour=21&daily_minutes=120'
 ```
 
-Keep cookie jars and credentials out of source control.
+Do not commit cookie files or credentials.
 
-## Source references
+## Useful references
 
 - Canvas assignments API: https://developerdocs.instructure.com/services/canvas/resources/assignments
-- Moodle calendar API overview: https://moodledev.io/docs/5.0/apis/core/calendar
-- Moodle web service function listing: https://docs.moodle.org/dev/Talk:Web_service_API_functions
-- A Moodle instance's own **Site administration → Server → Web services → API documentation** is authoritative for that installation's enabled functions.
+- Moodle calendar API: https://moodledev.io/docs/5.0/apis/core/calendar
+- Moodle web service functions: https://docs.moodle.org/dev/Talk:Web_service_API_functions

@@ -1,4 +1,3 @@
-"""Deterministic earliest-deadline-first planning in a student's local timezone."""
 from datetime import datetime, timedelta, time, timezone
 from zoneinfo import ZoneInfo
 

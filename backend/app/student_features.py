@@ -1,4 +1,3 @@
-"""Student scheduling, portable account recovery, and account data controls."""
 import json, secrets, hashlib, time
 from datetime import date, datetime, time as clock, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -68,7 +67,6 @@ def class_events(settings,start,tz):
     return result
 
 def shared_throttle(s,bucket,maximum=20):
-    """Atomic fixed-window counters shared across serverless instances."""
     from sqlalchemy.dialects.postgresql import insert as pg_insert
     from sqlalchemy.dialects.sqlite import insert as sqlite_insert
     now=int(time.time()); bucket=hashlib.sha256(bucket.encode()).hexdigest()
@@ -94,7 +92,6 @@ def install_routes(app,user,hasher):
     def get_settings(uid=Depends(user),s:Session=Depends(db)): return settings_for(s,uid)
     @app.put('/api/student-settings')
     def save_settings(body:StudentSettingsInput,uid=Depends(user),s:Session=Depends(db)):
-        # Serialize writers on the account, also protecting against initial row races.
         s.scalar(select(User).where(User.id==uid).with_for_update())
         value=s.get(StudentSettings,uid)
         if value is None: value=StudentSettings(user_id=uid);s.add(value)

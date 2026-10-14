@@ -1,13 +1,50 @@
 # Security
 
-This is an initial self-hostable release, not an independently audited campus platform.
+Unified Student Hub is still an early project. It has not gone through an independent security audit and should not be treated as a campus wide production platform yet.
 
-Do not post access tokens, passwords, cookies, private documents, or exploit details in public issues. If GitHub private vulnerability reporting is enabled for the repository, use **Security → Report a vulnerability**. Otherwise ask the maintainer for a private reporting channel without posting exploit details.
+## Reporting a security problem
 
-The app uses Argon2 password hashes, random revocable sessions, per-user ownership checks, request verification headers, and exact operator-controlled LMS hostname allowlists. Tokens are not intentionally persisted; avoid enabling HTTP request-body/debug logging that could capture them.
+Do not post passwords, tokens, cookies, private documents, or working exploit details in a public issue.
 
-Serve shared deployments over HTTPS with `COOKIE_SECURE=true`, reverse-proxy body/rate limits, constrained outbound access, and regular database backups. Read `docs/DEPLOYMENT.md` for authentication throttling and hosting controls.
+If GitHub private vulnerability reporting is enabled, use **Security → Report a vulnerability**.
 
-Known limitations: no email-based recovery, no versioned schema migrations, and PDF parsing runs in the application process. Do not open unrestricted public registration on an unmonitored server. Keep dependencies updated and test them before deploying upgrades.
+If it is not enabled, contact the maintainer privately before sharing sensitive technical details.
 
-Recovery uses a pre-generated single-use secret stored only as a SHA-256 digest. Reset revokes all server sessions; previously saved offline device copies must be cleared on those devices. Authentication and sensitive-action counters are stored in the database across instances.
+## Current protections
+
+The app currently uses:
+
+- Argon2 password hashing
+- random revocable sessions
+- per user ownership checks
+- request verification headers for writes
+- operator controlled LMS hostname allowlists
+- database backed throttling for sensitive account actions
+
+LMS tokens are not intentionally saved by the application.
+
+## Hosting safely
+
+Shared deployments should use HTTPS with `COOKIE_SECURE=true`.
+
+Database credentials and other secrets should stay in the hosting provider's secret settings, not in GitHub.
+
+Use backups, reasonable request limits, and trusted outbound network rules where possible.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for more deployment notes.
+
+## Known limits
+
+The project does not currently have:
+
+- an independent penetration test
+- email based password recovery
+- campus SSO
+- a full schema migration system
+- background notification delivery
+
+PDF parsing also runs in the application process.
+
+For an open public deployment, monitor the service and keep dependencies updated.
+
+Recovery codes are stored as SHA 256 digests. A successful password reset revokes server sessions. Offline copies already saved on another device remain on that device until they are cleared there.

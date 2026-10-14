@@ -1,4 +1,3 @@
-"""Admin-allowlisted LMS integrations. Tokens are used only for this request."""
 import os
 from urllib.parse import urlsplit
 from datetime import datetime, timezone
