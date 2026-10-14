@@ -1,74 +1,102 @@
 # Unified Student Hub
 
-I'm building a student workspace for deadlines, study materials, and weekly planning. It can import coursework, let you review the dates, and plan study time around your calendar.
+Unified Student Hub is an open source student workspace I'm building to keep schoolwork in one place.
+
+The goal is simple: add what you need to finish, tell the app when you are free, and let it help you build a realistic study week.
+
+**Live beta:** https://unified-student-hub-vg2s.vercel.app/
 
 React · FastAPI · PostgreSQL · SQLite for local development · MIT license
 
-## Features
-
-- Per-day study availability and manual recurring classes or work shifts.
-- Log study minutes against remaining deadline effort.
-- Optional in-app/browser reminders and calendar export alerts.
-- Single-use recovery codes, account data export, and account deletion.
-
-- Separate student accounts with hashed passwords and server-side sessions.
-- Add, edit, complete, search, and delete deadlines; organize them by course.
-- Review-first PDF/TXT syllabus extraction. Edit titles, dates, courses, and effort before saving.
-- ICS calendar imports as busy time or assignment deadlines, plus deadline export.
-- Canvas assignment and Moodle due/close event adapters with on-demand previews.
-- Earliest-deadline-first planning in 30-minute blocks, with a daily effort budget and timezone selection.
-- Workload warnings for overdue tasks and work that cannot fit into the chosen week.
-- Repeated imports update matching items without resetting completion or effort estimates.
-- Guided three-step onboarding and removable sample deadlines dated for the coming week.
-- Account-saved timezone, study hours, and daily budget across refreshes and devices.
-- Responsive interface, sample files, CI checks, and documented extension points.
-
 ![Student Hub dashboard](docs/dashboard.png)
 
-This is an early release for local use and small hosted pilots. School integrations need school-issued tokens and have not been tested against a real institution. See [test notes and limits](docs/VERIFICATION.md).
+## What it can do
 
-## Quick start: Docker + PostgreSQL
+- Create, edit, complete, search, and delete deadlines
+- Organize work by course
+- Estimate how much study time is left for each task
+- Build a weekly study plan around your available hours
+- Add recurring classes and other weekly commitments
+- Import syllabus files and calendars
+- Preview Canvas and Moodle coursework before saving it
+- Store PDFs, presentations, documents, spreadsheets, text files, and images on your device
+- Read and annotate PDFs
+- Use a built in focus and break timer
+- Export deadlines to a calendar
+- Save study preferences to your account
+- Use parts of the app offline and sync supported changes later
+- Use optional reminders while the app is open
+- Export account data and create a recovery code
 
-Install Docker with Compose, download/clone this repository, and open a terminal inside its root folder.
+This is still an early beta. I am actively improving the interface, onboarding, and deployment setup. If something feels confusing, that feedback is useful.
+
+## First time using it
+
+A simple way to start is:
+
+1. Add a deadline.
+2. Open **Weekly plan** and save the hours you are usually free to study.
+3. Review the plan and adjust your schedule if needed.
+
+If you only want to explore the app, use **Try sample deadlines** on the Overview page. The sample items are clearly labeled and can be removed together without touching your real coursework.
+
+## Quick start with Docker
+
+Install Docker with Compose, clone the repository, and open a terminal in the project folder.
 
 ```bash
 cp .env.example .env
 python -c "import secrets; print(secrets.token_hex(24))"
 ```
 
-On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`. Put the generated value into `POSTGRES_PASSWORD` in `.env` (do not commit that file).
+On Windows PowerShell, use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Put the generated value into `POSTGRES_PASSWORD` in `.env`.
+
+Start the app:
 
 ```bash
 docker compose up --build -d
 ```
 
-Open **http://localhost:8000**, create an account, and add a deadline. For interactive API documentation, open **http://localhost:8000/docs**.
+Open **http://localhost:8000**.
+
+API documentation is available at **http://localhost:8000/docs**.
+
+Useful commands:
 
 ```bash
 docker compose logs -f app
 docker compose down
 ```
 
-The database survives normal stops. `docker compose down -v` permanently removes it, so avoid that command unless you intend to erase your data.
+The database survives normal stops. `docker compose down -v` removes the database volume, so only use it when you actually want to erase local data.
 
 ## Local development without Docker
 
-Requires Python 3.12 and Node.js 22+.
+You need Python 3.12 and Node.js 22 or newer.
+
+Create a virtual environment:
 
 ```bash
 python -m venv .venv
 ```
 
-Activate the environment:
+Activate it:
 
 ```bash
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
+
 # macOS / Linux
 source .venv/bin/activate
 ```
 
-Then:
+Install dependencies and start the backend:
 
 ```bash
 pip install -r backend/requirements.txt
@@ -78,94 +106,112 @@ cd backend
 uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-This creates a local SQLite database in `backend/hub.db`. No database setup is needed. Environment variables in `.env` are read by Docker Compose; for local `uvicorn`, export them in your terminal if needed.
+Local development uses SQLite at `backend/hub.db`, so you do not need to set up PostgreSQL just to work on the project.
 
-For frontend hot reload, run `npm run dev --prefix frontend` from a second terminal at the repository root. Open the URL Vite prints. Its `/api` proxy forwards requests to FastAPI on port 8000. The backend continues running in the first terminal.
+For frontend hot reload, run this from another terminal at the repository root:
 
-## Codespaces
+```bash
+npm run dev --prefix frontend
+```
 
-The included development-container configuration installs the dependencies and builds the interface. See [step-by-step Codespaces instructions](docs/CODESPACES.md).
+Vite forwards `/api` requests to FastAPI on port 8000.
 
-## First visit
+## Imports
 
-Follow the checklist on **Overview**: add a deadline, save study hours, then review **Weekly plan**. **Try sample deadlines** adds three clearly labeled practice tasks dated two, four, and six days ahead in the selected study timezone. Repeated clicks do not duplicate or reset existing samples. **Remove sample deadlines** deletes only those practice tasks, including edits to them; real coursework stays.
+### Syllabus and calendar files
 
-For the five-student pilot and remaining hosting work, see [the beta launch checklist](docs/BETA.md).
+The app can preview text based PDF or TXT syllabi and ICS calendar files before anything is saved.
 
-## Trying the sample files
+Supported syllabus dates include `YYYY-MM-DD` and full English month dates such as `January 2, 2030`.
 
-1. Create an account and open **Imports → Syllabus**.
-2. Upload `samples/syllabus.txt` and click **Preview import**.
-3. Review dates, replace course names, and adjust effort estimates; then confirm.
-4. Import `samples/calendar.ics` as **Busy time**.
-5. Open **Weekly plan**, select **2030-01-01**, and choose **Asia/Manila**, **17:00–21:00**, **120 minutes/day**. Samples use fixed future dates so they are reproducible; change dates for your semester.
-6. Add a large task due tomorrow to see the workload warning.
-7. Complete a deadline and watch the plan recalculate.
+Scanned PDFs are not supported yet.
 
-## Connect a school LMS
+Recurring ICS events are skipped with a warning. Use expanded calendar occurrences or add recurring classes manually in the app.
 
-The server owner must set `LMS_ALLOWED_HOSTS` to exact trusted school hostnames. Blank disables network imports. Only allow domains operated by institutions you trust; the server sends tokens to these domains.
+### Canvas and Moodle
+
+The server owner must allow trusted school hostnames through `LMS_ALLOWED_HOSTS`.
+
+Example:
 
 ```dotenv
 LMS_ALLOWED_HOSTS=university.instructure.com,moodle.university.edu
 ```
 
-Restart/recreate the app after changing this setting:
+Canvas and Moodle tokens are used for the current request and are not intentionally stored by the app.
+
+School APIs differ, so always review the import preview before saving.
+
+## Study planner
+
+The planner is deterministic. It is not an AI prediction.
+
+It looks at:
+
+- deadlines
+- remaining study minutes
+- available study hours
+- busy calendar events
+- recurring classes
+- daily study limits
+
+It schedules work in small blocks and warns when the selected week cannot fit everything.
+
+Completing work does not happen automatically. Update the task or log study minutes as you make progress.
+
+## Offline study
+
+On a personal device, choose **Enable offline access** while you are connected.
+
+Offline mode can keep supported deadlines, preferences, planning data, and locally stored study materials available on the same browser and device.
+
+Materials are device only. They do not automatically sync across devices.
+
+Use the Materials backup feature before clearing browser data.
+
+More details are in [Offline Study](docs/OFFLINE_STUDY.md).
+
+## Deployment
+
+The repository supports several ways to run the project.
+
+For the current hosted beta, see [Vercel deployment](docs/VERCEL.md).
+
+For Render and Neon, see [Render + Neon](docs/RENDER_NEON.md).
+
+For self hosting, see [Deployment Notes](docs/DEPLOYMENT.md).
+
+GitHub Pages cannot run the FastAPI and PostgreSQL backend by itself.
+
+## Tests
+
+From the repository root:
 
 ```bash
-docker compose up -d --force-recreate app
-```
-
-- **Canvas:** provide the HTTPS school URL, your personal access token, and course IDs from course URLs. Imports dated assignments that do not show a submitted timestamp for your account. Pagination is bounded to 20 pages per course; previews are capped at 500 deadlines. Individual due dates depend on what Canvas returns for the authenticated student.
-- **Moodle:** provide the HTTPS site root (including a subdirectory if applicable), an approved web-service token, and numeric course IDs. The service must expose `core_calendar_get_calendar_events`. Imports `due` and `close` calendar events for the next 180 days. School settings and plugins affect which events are available; inspect the preview.
-- Tokens are used for the current request, not saved in the database. Import again when you want refreshed deadlines. This version does not run background sync or OAuth.
-- If the institution disables token/API access, use a syllabus or ICS export instead.
-
-## Things to know
-
-- PDF extraction handles **text PDFs**, not scans. Supported dates: `YYYY-MM-DD` and full English month dates such as `January 2, 2030`. Every extracted date is a **candidate**, not a verified assignment. Defaults to 23:59 in the chosen import timezone. Always review the original document.
-- ICS recurring events are deliberately skipped with a visible warning. Export expanded individual occurrences or use single events. All-day busy events block the full local day; all-day deadlines default to 23:59.
-- Planning uses one daily time window for all seven days, earliest due date first, and a daily budget. It is deterministic, not an AI prediction. A busy event overlapping a 30-minute grid block excludes that whole block. It schedules only future time and reports leftover effort.
-- Planning does not mark work complete or track elapsed study time. Update the remaining minutes as you work. Timezone, study hours, and daily budget are saved to your account when you select **Save preferences & update plan**. The displayed week starts on the current device date when you return; a manually selected week is not saved.
-- Re-imported matching deadlines update their title, course, and date but keep your completion flag and effort. Imported busy events match by ICS UID; changing a syllabus line creates a new candidate. There is no automatic deletion when a source item disappears.
-- Recovery requires a code generated in Account settings before forgetting your password. Reminders run while the app is open; calendar exports include alerts when enabled. No email delivery, OAuth, background push, ICS recurrence expansion, or university SSO yet.
-
-## Share with other people
-
-Making the repository public lets others download, fork, extend, and self-host it. A GitHub repository alone does **not** run this backend. GitHub Pages cannot host FastAPI/PostgreSQL.
-
-For Vercel hosting, follow the [Vercel deployment guide](docs/VERCEL.md). The repository includes the FastAPI entrypoint and frontend build configuration; a persistent PostgreSQL database is required.
-
-For an alternative student beta setup, follow the [Render + Neon setup guide](docs/RENDER_NEON.md); the included `render.yaml` preconfigures the Free web service.
-
-For a shared browser URL, deploy the Docker app behind an HTTPS reverse proxy and a durable PostgreSQL database. Follow [deployment notes](docs/DEPLOYMENT.md). This initial release is not a managed campus-wide service or an uptime promise.
-
-## Tests and development
-
-```bash
-# From the repository root, with your virtual environment active
 cd backend
 python -m pytest -q
-# Back at the root
 cd ..
 npm ci --prefix frontend
 npm run build --prefix frontend
 ```
 
+The repository also includes browser smoke tests and GitHub Actions checks.
+
+## Project docs
+
 [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Verification](docs/VERIFICATION.md)
 
 ## Roadmap
 
-- Imported ICS recurrence expansion (manual weekly classes are supported).
-- Study history and analytics (logging minutes already updates remaining effort).
-- OAuth integrations and opt-in scheduled sync.
-- Email-based recovery and campus SSO.
-- Versioned database migrations and larger deployment testing.
+Some things I still want to improve:
 
-These are still on the to-do list. Contributions are welcome under the MIT license.
+- recurring ICS expansion
+- clearer study history and analytics
+- OAuth based integrations
+- scheduled sync
+- email recovery and campus SSO
+- versioned database migrations
+- larger deployment testing
+- simpler onboarding and navigation
 
-## Offline materials and focus timer
-
-Sign in and choose **Enable offline access** on your personal device. The app can reopen without internet, queue deadline/preference edits for reconnection, and plan locally. The **Materials** tab saves PDFs, presentations, documents, spreadsheets, text, and images on the device; PDFs support area highlights, drawing, and annotated downloads. **Focus timer** supports custom study/rest minutes, cycles, pause/resume, and refresh recovery.
-
-Materials do **not** sync across devices. Download backups before clearing browser data. Office previews show extracted text; this is not a full PowerPoint/Word editor. See [offline study instructions and limits](docs/OFFLINE_STUDY.md).
+Contributions and feedback are welcome.
