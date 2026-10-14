@@ -1,19 +1,19 @@
-# Self-hosting and shared deployments
+# Running Student Hub on your own server
 
-## Starting setup
+## Before you deploy
 
-Use `compose.yaml` for a single app process and PostgreSQL on one host. The app port is bound to loopback by default. Place a reverse proxy on that host in front of `127.0.0.1:8000` for public access.
+For a simple self hosted setup, use `compose.yaml` to run one app process and PostgreSQL on the same host. The app port is bound to loopback by default. Place a reverse proxy on that host in front of `127.0.0.1:8000` for public access.
 
 1. Generate a unique hexadecimal database password in `.env`.
 2. Configure HTTPS at the reverse proxy with a certificate for your domain.
 3. Set `COOKIE_SECURE=true` so session cookies are sent only over HTTPS.
-4. Set exact trusted `LMS_ALLOWED_HOSTS` if you need LMS import. Never allow arbitrary user-provided hosts, metadata services, or internal management endpoints. Use outbound network restrictions in a shared deployment.
+4. Set exact trusted `LMS_ALLOWED_HOSTS` if you need LMS import. Never allow arbitrary user supplied hosts, metadata services, or internal management endpoints. Use outbound network restrictions in a shared deployment.
 5. Limit request bodies at the proxy to approximately 3 MB and apply per-client request/rate limits to authentication and upload paths. The app limits parsed files to 2 MB and 50 PDF pages; parsing untrusted PDFs still consumes resources.
-6. Authentication uses both a process-local rolling throttle and database-backed fixed-window counters: 20 attempts per normalized username per five minutes across login and registration. Recovery and sensitive account actions have separate 10-attempt limits. Successful and unsuccessful attempts count. Database counters survive restarts and are shared across workers. This does not stop attempts across many usernames; retain aggregate/per-client limits at the trusted hosting edge. Never trust arbitrary forwarding headers.
+6. Authentication uses both a stored within each running process rolling throttle and database-backed fixed-window counters: 20 attempts per normalized username per five minutes across login and registration. Recovery and sensitive account actions have separate 10-attempt limits. Successful and unsuccessful attempts count. Database counters survive restarts and are shared across workers. This does not stop attempts across many usernames; retain aggregate/per-client limits at the trusted hosting edge. Never trust arbitrary forwarding headers.
 7. After desired users register, set `ALLOW_REGISTRATION=false` to close registration, then recreate the app container.
 8. Back up PostgreSQL and test restore before relying on it.
 
-The app is intended to run same-origin: frontend and `/api` on the same domain. Do not add wildcard credentialed CORS. API writes require `X-Requested-With: StudentHub`; session cookies are HttpOnly and SameSite=Lax. The app does not trust forwarded headers for URL-based security decisions.
+The frontend and `/api` should normally use the same domain. Do not add wildcard credentialed CORS. API writes require `X-Requested-With: StudentHub`; session cookies are HttpOnly and SameSite=Lax. The app does not trust forwarded headers for URL-based security decisions.
 
 ## Backups
 
@@ -23,7 +23,7 @@ Example using a terminal on the Docker host:
 docker compose exec -T db pg_dump -U studenthub -d studenthub > studenthub-backup.sql
 ```
 
-Backups contain sensitive student/account data. Store them outside the public repository and restrict access. Restore into an empty database:
+Backups contain private account and student data. Store them outside the public repository and restrict access. Restore into an empty database:
 
 ```bash
 docker compose exec -T db psql -U studenthub -d studenthub < studenthub-backup.sql
@@ -33,9 +33,9 @@ For local SQLite, stop the app before copying `backend/hub.db`. An ICS export is
 
 ## Upgrades
 
-The schema is created on startup. The beta onboarding update adds only the missing `study_preferences` table, without altering existing tables. This additive upgrade was tested against an existing SQLite database; back up PostgreSQL and validate the upgrade on a restored copy before a hosted rollout. There is no migration framework yet. Do not assume future schema changes can be applied by simply rebuilding a container. Back up first and review each release's migration instructions.
+The schema is created on startup. The beta onboarding update adds only the missing `study_preferences` table, without altering existing tables. This additive upgrade was tested against an existing SQLite database; back up PostgreSQL and validate the upgrade on a restored copy before a hosted rollout. A complete migration framework is not in place yet. Do not assume future schema changes can be applied by simply rebuilding a container. Back up first and review each release's migration instructions.
 
-## What this deployment does not provide
+## Current limits
 
 No institutional compliance assessment, email-based password recovery, campus SSO, closed-app background sync, or high-availability architecture. Docker/PostgreSQL definitions are supplied, but were not executed in the local test environment because no Docker daemon was available. Validate them on your own host before inviting others.
 
