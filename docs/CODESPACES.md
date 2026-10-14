@@ -1,4 +1,4 @@
-# Run the Student Hub in GitHub Codespaces
+# Running Student Hub in GitHub Codespaces
 
 1. Open the project repository on GitHub.
 2. Select **Code → Codespaces → Create codespace on main**.
@@ -24,7 +24,7 @@ npm ci --prefix frontend
 npm run build --prefix frontend
 ```
 
-## Enable a school integration
+## Connect a school LMS
 
 Stop the server with Ctrl+C, then restart with the approved hostnames:
 
@@ -34,13 +34,13 @@ LMS_ALLOWED_HOSTS=your-school.instructure.com COOKIE_SECURE=true uvicorn app.mai
 
 Use the actual hostname your school provides. Never paste your token into committed files. Paste it into the Imports screen only.
 
-## Save code changes
+## Save your changes
 
-Use the Source Control panel or normal Git commands to commit your source edits. The database, passwords, `.env`, and uploaded study material must not be committed. `.gitignore` excludes the local database and environment files.
+Use the Source Control panel or normal Git commands to commit your source edits. Do not commit the database, passwords, `.env` files, or private study materials. `.gitignore` excludes the local database and environment files.
 
-Codespaces is a development environment that can stop or be deleted. It is not durable public hosting. Your SQLite data stays in that codespace and is lost if you delete it. Export deadlines before deleting a workspace; ICS exports do not contain accounts or study history.
+Codespaces is meant for development, not permanent hosting. It is not durable public hosting. Your SQLite data stays in that codespace and is lost if you delete it. Export deadlines before deleting a workspace; ICS exports do not contain accounts or study history.
 
-## Update an existing Codespace for the beta features
+## Update an existing Codespace
 
 Stop the server with Ctrl+C. With the virtual environment active, run:
 
