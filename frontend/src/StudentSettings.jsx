@@ -27,7 +27,7 @@ export function ReminderBanner({tasks,settings,username}){
  const [now,setNow]=useState(Date.now());
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),60000);return()=>clearInterval(id);},[]);
  const upcoming=settings?.reminders?tasks.filter(t=>!t.done&&Date.parse(t.due)>now&&Date.parse(t.due)<=now+settings.reminder_hours*3600000):[];
- useEffect(()=>{if(!settings?.reminders||!('Notification' in window)||Notification.permission!=='granted')return;for(const task of upcoming){const key=`hub-reminded:${username}:${task.id}:${task.due}`;try{if(sessionStorage.getItem(key))continue;sessionStorage.setItem(key,'1');new Notification('Deadline approaching',{body:`${task.title} is due ${new Date(task.due).toLocaleString()}`,tag:key});}catch{/* The in-app reminder remains available. */}}},[now,tasks,settings,username]);
+ useEffect(()=>{if(!settings?.reminders||!('Notification' in window)||Notification.permission!=='granted')return;for(const task of upcoming){const key=`hub-reminded:${username}:${task.id}:${task.due}`;try{if(sessionStorage.getItem(key))continue;sessionStorage.setItem(key,'1');new Notification('Deadline approaching',{body:`${task.title} is due ${new Date(task.due).toLocaleString()}`,tag:key});}catch{}}},[now,tasks,settings,username]);
  return upcoming.length?<aside className="warnings" role="status"><h3>Due within {settings.reminder_hours} hours</h3>{upcoming.map(t=><p key={t.id}><strong>{t.title}</strong> · {new Date(t.due).toLocaleString()}</p>)}</aside>:null;
 }
 export function Account({username,settings,onSaved,onDeleted}){
